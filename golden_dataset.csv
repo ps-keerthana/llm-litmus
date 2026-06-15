@@ -1,0 +1,27 @@
+question,ground_truth,category,difficulty
+What is the return policy?,We offer a 30-day return policy for all products. No receipt is needed for returns under 500 rupees. Items must be in original condition.,factual,easy
+How many days do I have to return a product?,30 days.,factual,easy
+Do I need a receipt to return something?,No receipt is needed for returns under 500 rupees.,factual,easy
+What condition must items be in for a return?,Items must be in original condition.,factual,easy
+What are the working hours of support?,The support team works Monday to Saturday 9 AM to 6 PM IST.,factual,easy
+Is support available on Sundays?,No. The support team is closed on Sundays and national holidays.,factual,easy
+What time does support open?,9 AM IST.,factual,easy
+What time does support close?,6 PM IST.,factual,easy
+How long does standard delivery take?,3 to 5 business days.,factual,easy
+How long does express delivery take?,1 to 2 business days.,factual,easy
+What is the cost of express delivery?,Express delivery costs an additional 99 rupees.,factual,easy
+What payment methods are accepted?,"UPI, credit cards, debit cards, net banking, and cash on delivery.",factual,easy
+Is UPI accepted as a payment method?,Yes UPI is accepted.,factual,easy
+Is cash on delivery available?,Yes cash on delivery is available.,factual,easy
+What is the minimum order amount for EMI?,EMI is available on orders above 2000 rupees.,factual,easy
+How do I track my order?,Visit the website and enter your order ID in the Track Order section.,factual,easy
+Will I get SMS updates for my order?,Yes you will receive SMS updates.,factual,easy
+How long after placing an order can I cancel it?,Orders can be cancelled within 2 hours of placing them.,factual,easy
+What happens if I try to cancel after the order is dispatched?,Cancellation is not possible if the order has been dispatched.,factual,easy
+Can I cancel an order after 2 hours?,Only if the order has not been dispatched yet.,factual,medium
+Do you deliver on Sundays?,There is no mention of Sunday delivery. Support is closed on Sundays but delivery days are not specified.,edge_case,medium
+What if I want to return something worth 600 rupees without a receipt?,The no-receipt policy applies only to returns under 500 rupees. For items above that a receipt may be needed.,edge_case,medium
+Can I pay part of my order with UPI and part with cash on delivery?,The document does not mention split payment methods.,edge_case,medium
+Is there a customer support phone number?,The document does not provide a phone number.,out_of_scope,medium
+What is the price of your products?,The document does not contain pricing information.,out_of_scope,easy
+Do you have a loyalty program?,The document does not mention a loyalty program.,out_of_scope,easy

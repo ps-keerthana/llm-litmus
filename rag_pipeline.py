@@ -25,9 +25,13 @@ PRICE_INPUT_1M = 0.05
 PRICE_OUTPUT_1M = 0.08
 
 # ── Robust API Call with Retry Logic ──────────────────────
+LAST_API_SLEEP_TIME = 0.0
+
 def call_groq_with_retry(messages, response_format=None, temperature=0, max_retries=5):
     """Call Groq API with exponential backoff and rate limit handling."""
     from groq import RateLimitError
+    global LAST_API_SLEEP_TIME
+    LAST_API_SLEEP_TIME = 0.0
     backoff = 2.0
     for attempt in range(max_retries):
         try:
@@ -44,11 +48,13 @@ def call_groq_with_retry(messages, response_format=None, temperature=0, max_retr
         except RateLimitError as e:
             print(f"  [Rate Limit] Groq TPM/RPM limit hit on attempt {attempt+1}/{max_retries}. Sleeping 12s...")
             time.sleep(12.0)
+            LAST_API_SLEEP_TIME += 12.0
         except Exception as e:
             print(f"  [Warning] Groq API call failed (attempt {attempt+1}/{max_retries}): {e}")
             if attempt == max_retries - 1:
                 raise e
             time.sleep(backoff)
+            LAST_API_SLEEP_TIME += backoff
             backoff *= 2.0
 
 # ── Step 1: Load and chunk documents ─────────────────────

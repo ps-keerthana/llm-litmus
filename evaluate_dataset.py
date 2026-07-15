@@ -149,7 +149,9 @@ def run_eval():
         start_time = time.time()
         context_chunks = retrieve(question, collection)
         answer, gen_p, gen_c = generate_answer(question, context_chunks)
-        latency = round(time.time() - start_time, 2)
+        elapsed = time.time() - start_time
+        import rag_pipeline
+        latency = round(max(0.0, elapsed - rag_pipeline.LAST_API_SLEEP_TIME), 2)
 
         # Metric 1: Semantic similarity (local, no API call)
         semantic_sim = compute_semantic_similarity(answer, ground_truth)

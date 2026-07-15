@@ -1,137 +1,187 @@
+"""
+Dataset Generator (generate_dataset.py)
+Uses Groq LLM to synthesize new Question-Answer pairs from the docs/ corpus
+and appends them to golden_dataset.csv with the full metadata schema.
+
+Run this script manually when expanding the benchmark suite:
+    python generate_dataset.py
+"""
+
 import os
 import csv
 import json
 import time
+import uuid
+from typing import List, Dict, Any
+
 from dotenv import load_dotenv
 from groq import Groq
 
 load_dotenv()
 
-groq_client = Groq(api_key=os.getenv("GROQ_API_KEY"), timeout=20.0)
+# Lazy-initialize the Groq client to avoid crashing on import without API key
+_groq_client = None
 
-# ── Load documents ──────────────────────────────────────
-def load_docs(folder="docs"):
+def _get_client() -> Groq:
+    global _groq_client
+    if _groq_client is None:
+        api_key = os.getenv("GROQ_API_KEY")
+        if not api_key:
+            raise EnvironmentError("GROQ_API_KEY is not set.")
+        _groq_client = Groq(api_key=api_key, timeout=20.0)
+    return _groq_client
+
+
+DATASET_PATH = "golden_dataset.csv"
+DOCS_FOLDER = "docs"
+TARGET_TOTAL = 210
+QUESTIONS_PER_CHUNK = 5
+
+# Full schema matching golden_dataset.csv
+FIELDNAMES = [
+    "unique_id", "question", "ground_truth", "category", "difficulty",
+    "tags", "expected_sources", "expected_citations", "reasoning_type",
+    "version", "evaluation_notes"
+]
+
+
+def load_docs(folder: str = DOCS_FOLDER) -> List[Dict[str, str]]:
+    """Loads text chunks from all .txt files in the docs folder."""
     chunks = []
     if not os.path.exists(folder):
-        print(f"Docs folder '{folder}' not found.")
+        print(f"[WARNING] Docs folder '{folder}' not found.")
         return chunks
-    for filename in os.listdir(folder):
+    for filename in sorted(os.listdir(folder)):
         if filename.endswith(".txt"):
-            with open(os.path.join(folder, filename), "r", encoding="utf-8") as f:
+            path = os.path.join(folder, filename)
+            with open(path, "r", encoding="utf-8") as f:
                 text = f.read()
             for chunk in text.strip().split("\n\n"):
                 chunk = chunk.strip()
                 if chunk:
-                    chunks.append(chunk)
+                    chunks.append({"source": filename, "text": chunk})
     return chunks
 
-# ── Load existing golden dataset ──────────────────────────
-def load_existing_dataset(filepath="golden_dataset.csv"):
-    existing_questions = []
-    if os.path.exists(filepath):
-        with open(filepath, "r", encoding="utf-8") as f:
-            reader = csv.DictReader(f)
-            for row in reader:
-                existing_questions.append(row)
-    return existing_questions
 
-# ── Generate QA pairs using Groq ──────────────────────────
-def generate_questions_for_chunk(chunk, count=5):
-    prompt = f"""You are an AI data synthesizer. Your task is to generate high-quality, realistic Question-Answer pairs based on the context chunk below.
+def load_existing_dataset(filepath: str = DATASET_PATH) -> List[Dict[str, Any]]:
+    """Returns all rows currently in the golden dataset CSV."""
+    if not os.path.exists(filepath):
+        return []
+    with open(filepath, "r", encoding="utf-8") as f:
+        return list(csv.DictReader(f))
 
-Context Chunk:
+
+def generate_questions_for_chunk(chunk: Dict[str, str], count: int = QUESTIONS_PER_CHUNK) -> List[Dict[str, Any]]:
+    """
+    Calls Groq to generate structured Q&A pairs from a single context chunk.
+    Returns a list of question dicts conforming to the full metadata schema.
+    """
+    prompt = f"""You are a benchmark dataset synthesizer for an Indian income tax RAG system.
+
+Generate {count} diverse Question-Answer pairs from the context below.
+
+Context (Source: {chunk['source']}):
 \"\"\"
-{chunk}
+{chunk['text']}
 \"\"\"
 
-Please generate {count} diverse questions.
 Requirements:
-1. Categorize them into one of the following:
-   - "factual": Direct answers from the context.
-   - "edge_case": Complex questions, hypothetical scenarios, or slight variations that test constraints mentioned in the context.
-   - "out_of_scope": Questions that sound related to the context topic (e.g., delivery, cancellation, pricing) but cannot be answered using the provided text. The expected ground_truth for out_of_scope should clearly state that the document does not contain this information.
-2. Assign a difficulty: "easy", "medium", or "hard".
-3. Return ONLY a valid JSON object with a single key "questions" containing a list of objects. Do not include any markdown styling, conversational filler, or wrap the JSON in markdown blocks.
+- Include a mix of "factual", "edge_case", and "out_of_scope" categories.
+- Assign difficulty: "easy", "medium", or "hard".
+- Assign reasoning_type: one of "direct_lookup", "multi_step", "comparative", "negation", "numerical".
+- For "out_of_scope" questions, the ground_truth must clearly state the document does not contain this.
+- tags: a comma-separated string of 2-3 relevant keywords.
 
-JSON Schema:
+Return ONLY a valid JSON object with a single key "questions":
 {{
   "questions": [
     {{
       "question": "...",
       "ground_truth": "...",
-      "category": "factual" | "edge_case" | "out_of_scope",
-      "difficulty": "easy" | "medium" | "hard"
+      "category": "factual|edge_case|out_of_scope",
+      "difficulty": "easy|medium|hard",
+      "tags": "tag1, tag2",
+      "reasoning_type": "direct_lookup|multi_step|comparative|negation|numerical"
     }}
   ]
-}}
-"""
+}}"""
+
     try:
-        response = groq_client.chat.completions.create(
+        response = _get_client().chat.completions.create(
             model="llama-3.1-8b-instant",
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
-            temperature=0.7
+            temperature=0.7,
         )
         content = response.choices[0].message.content.strip()
         data = json.loads(content)
-        return data.get("questions", [])
+        questions = data.get("questions", [])
+        
+        # Enrich with full metadata schema
+        enriched = []
+        for q in questions:
+            enriched.append({
+                "unique_id": f"Q{str(uuid.uuid4())[:8].upper()}",
+                "question": q.get("question", ""),
+                "ground_truth": q.get("ground_truth", ""),
+                "category": q.get("category", "factual").lower(),
+                "difficulty": q.get("difficulty", "easy").lower(),
+                "tags": q.get("tags", ""),
+                "expected_sources": chunk["source"],
+                "expected_citations": "",
+                "reasoning_type": q.get("reasoning_type", "direct_lookup").lower(),
+                "version": "2.0",
+                "evaluation_notes": ""
+            })
+        return enriched
+
     except Exception as e:
-        print(f"Error generating questions for chunk: {e}")
+        print(f"  [Error] Failed to generate questions for chunk: {e}")
         return []
 
-def main():
-    print("Starting golden dataset generator...")
+
+def main() -> None:
+    print("=" * 55)
+    print("  Golden Dataset Generator")
+    print("=" * 55)
+    
     chunks = load_docs()
     if not chunks:
-        print("No documents found to generate questions from.")
+        print("No documents found. Add .txt files to the docs/ folder.")
         return
 
     existing = load_existing_dataset()
-    print(f"Found {len(existing)} existing questions.")
+    current_count = len(existing)
+    print(f"Existing questions: {current_count}")
+    print(f"Target total:       {TARGET_TOTAL}")
 
-    target_total = 105
-    needed = target_total - len(existing)
-    
+    needed = TARGET_TOTAL - current_count
     if needed <= 0:
-        print(f"Dataset already has {len(existing)} questions, which is >= target of {target_total}.")
+        print(f"Dataset already at target ({current_count} >= {TARGET_TOTAL}). No generation needed.")
         return
 
-    print(f"Need to generate {needed} new questions to reach target of {target_total}.")
+    print(f"Generating:         ~{needed} new questions from {len(chunks)} chunks\n")
     
-    # Calculate questions per chunk
-    num_chunks = len(chunks)
-    # Generate around needed+10 to be safe
-    needed_buffer = needed + 10
-    questions_per_chunk = max(1, -(-needed_buffer // num_chunks)) # ceiling division
-    
-    generated_rows = []
-    
+    generated = []
     for i, chunk in enumerate(chunks):
-        if len(existing) + len(generated_rows) >= target_total:
+        if current_count + len(generated) >= TARGET_TOTAL:
             break
-            
-        print(f"Generating questions for chunk {i+1}/{num_chunks}...")
-        questions = generate_questions_for_chunk(chunk, count=questions_per_chunk)
-        for q in questions:
-            # Clean categories & difficulties
-            q["category"] = q.get("category", "factual").lower()
-            q["difficulty"] = q.get("difficulty", "easy").lower()
-            generated_rows.append(q)
-            if len(existing) + len(generated_rows) >= target_total:
-                break
-        time.sleep(1) # buffer for rate limits
+        print(f"  Chunk {i+1:02d}/{len(chunks)} [{chunk['source']}]...", end=" ", flush=True)
+        new_qs = generate_questions_for_chunk(chunk)
+        generated.extend(new_qs)
+        print(f"+{len(new_qs)} questions")
+        time.sleep(1.5)  # Rate limit buffer
 
-    # Append to existing
-    all_rows = existing + generated_rows
-    
-    with open("golden_dataset.csv", "w", newline="", encoding="utf-8") as f:
-        fieldnames = ["question", "ground_truth", "category", "difficulty"]
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
+    all_rows = existing + generated
+    final_rows = all_rows[:TARGET_TOTAL]
+
+    with open(DATASET_PATH, "w", newline="", encoding="utf-8") as f:
+        writer = csv.DictWriter(f, fieldnames=FIELDNAMES, extrasaction="ignore")
         writer.writeheader()
-        writer.writerows(all_rows[:target_total])
+        writer.writerows(final_rows)
 
-    print(f"Successfully generated {len(generated_rows)} new questions!")
-    print(f"Total dataset size is now {len(all_rows[:target_total])} questions (saved to golden_dataset.csv).")
+    print(f"\nDone. Wrote {len(final_rows)} total questions to {DATASET_PATH}.")
+
 
 if __name__ == "__main__":
     main()

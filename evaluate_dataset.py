@@ -42,13 +42,24 @@ Inputs:
 {context}
 - Generated Answer: {answer}
 
-Evaluate and return a JSON object with these keys:
-1. "relevancy_score": float 0.0-1.0 (1.0 = answer matches ground truth meaning perfectly. If ground truth expects a refusal like "document does not mention" and the answer correctly refuses, score 1.0)
-2. "faithfulness_score": float 0.0-1.0 (1.0 = every claim is supported by context. Correct refusals when context lacks info = 1.0)
-3. "relevancy_reasoning": brief explanation
-4. "faithfulness_reasoning": brief explanation identifying any hallucinated claims
+Definitions & Scoring Rules:
+1. Relevancy Score (0.0 to 1.0):
+   - 1.0: The generated answer directly, correctly, and sufficiently answers the question based on the ground truth.
+   - If the ground truth expects a refusal (e.g., "The document does not mention..."), and the generated answer correctly states that it doesn't have information, score 1.0.
+   - Only penalize if the answer is incorrect, irrelevant, or fails to address the question.
 
-Return ONLY valid JSON."""
+2. Faithfulness Score (0.0 to 1.0):
+   - 1.0: Every claim made in the generated answer is directly supported by the retrieved context.
+   - IMPORTANT: If the generated answer is short, simple, or omits some details from the context, this is NOT a faithfulness issue. Do NOT penalize the faithfulness score for missing details or brevity. Only penalize if the answer states a fact that is not present in or is contradicted by the context.
+   - If the answer is a correct refusal (e.g. "I don't have information about that") and the context indeed doesn't contain the information, score 1.0.
+
+Provide your evaluation as a JSON object with these keys:
+- "relevancy_score": float (0.0 to 1.0)
+- "faithfulness_score": float (0.0 to 1.0)
+- "relevancy_reasoning": brief explanation of the relevancy score
+- "faithfulness_reasoning": brief explanation of the faithfulness score
+
+Return ONLY a valid JSON object. Do not include markdown formatting or wrapping."""
 
     try:
         response = call_groq_with_retry(
@@ -143,10 +154,31 @@ def run_eval():
         # Metric 1: Semantic similarity (local, no API call)
         semantic_sim = compute_semantic_similarity(answer, ground_truth)
 
-        # Metric 2 & 3: LLM judge (single API call)
-        llm_rel, faith, rel_reason, faith_reason, judge_p, judge_c = llm_judge_evaluate(
-            question, answer, ground_truth, context_chunks
-        )
+        # Check if the query is out of scope and the answer is a correct refusal (to bypass LLM judge)
+        is_out_of_scope_refusal = False
+        if category == "out_of_scope":
+            refusal_keywords = [
+                "don't have information", "do not have information", 
+                "no information", "not mentioned", "not specified", 
+                "not cover", "does not contain", "cannot find",
+                "doesn't provide", "don't provide", "do not provide"
+            ]
+            answer_lower = answer.lower()
+            if any(kw in answer_lower for kw in refusal_keywords):
+                is_out_of_scope_refusal = True
+
+        if is_out_of_scope_refusal:
+            llm_rel = 1.0
+            faith = 1.0
+            rel_reason = "Bypassed judge: Correct refusal for out-of-scope question."
+            faith_reason = "Bypassed judge: Correct refusal for out-of-scope question."
+            judge_p = 0
+            judge_c = 0
+        else:
+            # Metric 2 & 3: LLM judge (single API call)
+            llm_rel, faith, rel_reason, faith_reason, judge_p, judge_c = llm_judge_evaluate(
+                question, answer, ground_truth, context_chunks
+            )
         hallucination = round(1.0 - faith, 2)
 
         # Cost

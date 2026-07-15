@@ -25,8 +25,9 @@ PRICE_INPUT_1M = 0.05
 PRICE_OUTPUT_1M = 0.08
 
 # ── Robust API Call with Retry Logic ──────────────────────
-def call_groq_with_retry(messages, response_format=None, temperature=0, max_retries=3):
-    """Call Groq API with exponential backoff retry."""
+def call_groq_with_retry(messages, response_format=None, temperature=0, max_retries=5):
+    """Call Groq API with exponential backoff and rate limit handling."""
+    from groq import RateLimitError
     backoff = 2.0
     for attempt in range(max_retries):
         try:
@@ -40,6 +41,9 @@ def call_groq_with_retry(messages, response_format=None, temperature=0, max_retr
 
             response = groq_client.chat.completions.create(**kwargs)
             return response
+        except RateLimitError as e:
+            print(f"  [Rate Limit] Groq TPM/RPM limit hit on attempt {attempt+1}/{max_retries}. Sleeping 12s...")
+            time.sleep(12.0)
         except Exception as e:
             print(f"  [Warning] Groq API call failed (attempt {attempt+1}/{max_retries}): {e}")
             if attempt == max_retries - 1:

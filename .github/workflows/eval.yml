@@ -6,6 +6,14 @@ on:
   pull_request:
     branches: [ main ]
 
+# Concurrency control: only one evaluation job runs at a time per branch.
+# If a new push arrives while CI is running, the in-progress job is cancelled
+# and the new one starts. This prevents multiple jobs competing for the same
+# Groq org-level token quota simultaneously.
+concurrency:
+  group: eval-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   evaluate:
     runs-on: ubuntu-latest
@@ -19,68 +27,78 @@ jobs:
         with:
           python-version: "3.11"
 
-      - name: Cache dependencies
+      - name: Cache pip dependencies
         uses: actions/cache@v4
         with:
           path: ~/.cache/pip
           key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
 
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run eval pipeline (Smoke Test)
+      - name: Run Evaluation Suite (Smoke Test)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python evaluate_dataset.py --smoke
+        run: |
+          # Smoke mode: 10 queries (2/category, seed=42), no LLM judge.
+          #
+          # Why --no-judge:
+          #   Each generation call uses ~500 tokens. The judge would add another
+          #   ~900 tokens per query. With 10 queries, that doubles API usage from
+          #   ~5,000 to ~14,000 tokens — plus 10 extra RPM slots.
+          #   On a free-tier Groq account this is risky if the account was also
+          #   used locally in the same minute window.
+          #
+          # Why this is safe:
+          #   The CI gate checks pass_rate and retrieval_hit_rate, which are
+          #   measured using local semantic similarity (no API calls).
+          #   Hallucination gating runs on full evaluations triggered manually
+          #   or on a schedule (see CONTRIBUTING.md).
+          python evaluate.py --smoke --no-judge
 
-      - name: Run CI quality gate
-        run: python ci_check.py
+      - name: Verify CI Quality Gate & Regressions
+        run: python ci_gate.py
 
-      - name: Upload eval results
+      - name: Publish Actions Step Summary
+        if: always()
+        run: |
+          if [ -f eval_summary.md ]; then
+            cat eval_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Detailed Run Reports
         uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: eval-results
+          name: eval-results-${{ github.run_id }}
           path: eval_results/
+          retention-days: 30
 
-      # Auto-commit metrics_history.json back to the repo (push only)
-      - name: Commit metrics history
-        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+      # Auto-commit metrics_history.json back to main on successful merge.
+      # Uses --rebase to handle concurrent push conflicts gracefully.
+      - name: Auto-Commit Metrics Trend History
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main' && success()
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add metrics_history.json
-          git diff --cached --quiet || git commit -m "ci: update metrics history [skip ci]"
-          git push
+          git diff --cached --quiet || (git pull --rebase && git commit -m "ci: update metrics trend history [skip ci]" && git push)
 
-      # Post eval summary as PR comment
-      - name: Post eval summary on PR
-        if: github.event_name == 'pull_request'
+      # Post evaluation summary comment directly into Pull Requests
+      - name: Post Evaluation Comment to PR
+        if: github.event_name == 'pull_request' && always()
         uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const glob = require('glob');
-            const files = glob.sync('eval_results/run_*.json').sort();
-            if (files.length === 0) return;
-            const data = JSON.parse(fs.readFileSync(files[files.length - 1], 'utf8'));
-            const status = data.pass_rate >= 70 ? '✅' : '❌';
-            const body = `## ${status} LLM Eval Results
-
-            | Metric | Value |
-            |--------|-------|
-            | Pass Rate | ${data.pass_rate}% |
-            | Avg Faithfulness | ${data.avg_faithfulness} |
-            | Avg Semantic Similarity | ${data.avg_semantic_similarity} |
-            | Hallucination Rate | ${data.hallucination_rate_avg} |
-            | p95 Latency | ${data.p95_latency_sec}s |
-            | Total Cost | $${data.total_cost_usd} |
-            | Questions | ${data.passed}/${data.total_questions} passed |
-            | Commit | \`${data.commit_sha}\` |`;
-
-            github.rest.issues.createComment({
-              issue_number: context.issue.number,
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              body: body
-            });
+            if (fs.existsSync('eval_summary.md')) {
+              const body = fs.readFileSync('eval_summary.md', 'utf8');
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: body
+              });
+            }

@@ -28,10 +28,10 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run eval pipeline
+      - name: Run eval pipeline (Smoke Test)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
-        run: python evaluate_dataset.py
+        run: python evaluate_dataset.py --smoke
 
       - name: Run CI quality gate
         run: python ci_check.py

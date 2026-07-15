@@ -48,6 +48,80 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 
+# ── Normalize Schema for Legacy/Mock Runs ──────────────────
+def normalize_run_data(run: dict) -> dict:
+    """
+    Standardizes run output dictionaries (e.g., from old mock runs)
+    to match the new modular RAG evaluation pipeline schema, preventing KeyErrors.
+    """
+    if not run:
+        return run
+
+    summary_defaults = {
+        "pass_rate": 0.0,
+        "passed": 0,
+        "total_questions": 0,
+        "avg_retrieval_hit_rate": run.get("avg_relevancy", 1.0),
+        "avg_faithfulness": 1.0,
+        "hallucination_rate_avg": 0.0,
+        "p50_latency_sec": 0.0,
+        "p95_latency_sec": 0.0,
+        "p99_latency_sec": 0.0,
+        "avg_latency_sec": 0.0,
+        "avg_cost_usd": 0.0,
+        "total_cost_usd": 0.0,
+        "git_commit_hash": run.get("commit_sha", "unknown"),
+        "branch": "unknown",
+        "mode": "unknown",
+        "embedding_model": "unknown",
+        "llm_model": "unknown",
+        "timestamp": run.get("run_timestamp", run.get("timestamp", ""))
+    }
+    for k, v in summary_defaults.items():
+        if k not in run:
+            run[k] = v
+
+    normalized_results = []
+    for idx, r in enumerate(run.get("results", [])):
+        res_defaults = {
+            "unique_id": r.get("unique_id", f"Q{idx+1:03d}"),
+            "question": r.get("question", ""),
+            "ground_truth": r.get("ground_truth", ""),
+            "answer": r.get("answer", ""),
+            "category": r.get("category", "factual"),
+            "difficulty": r.get("difficulty", "easy"),
+            "expected_sources": r.get("expected_sources", "unknown"),
+            "expected_citations": r.get("expected_citations", ""),
+            "reasoning_type": r.get("reasoning_type", "direct_lookup"),
+            "hit_rate": r.get("hit_rate", r.get("llm_relevancy", 1.0)),
+            "mrr": r.get("mrr", 1.0),
+            "context_precision": r.get("context_precision", 1.0),
+            "context_recall": r.get("context_recall", 1.0),
+            "latency_sec": r.get("latency_sec", 0.0),
+            "semantic_similarity": r.get("semantic_similarity", 0.0),
+            "correctness": r.get("correctness", r.get("semantic_similarity", 1.0)),
+            "faithfulness": r.get("faithfulness", 1.0),
+            "hallucination": r.get("hallucination", r.get("hallucination_rate", 0.0)),
+            "confidence": r.get("confidence", 1.0),
+            "judge_reasoning": r.get("judge_reasoning", r.get("relevancy_reasoning", "No detail.")),
+            "status": r.get("status", "PASS"),
+            "failure_category": r.get("failure_category", "N/A"),
+            "prompt_tokens": r.get("prompt_tokens", 0),
+            "completion_tokens": r.get("completion_tokens", 0),
+            "cost_usd": r.get("cost_usd", 0.0),
+            "retrieved_chunks": r.get("retrieved_chunks", []),
+            "retrieved_sources": r.get("retrieved_sources", []),
+            "retrieved_similarities": r.get("retrieved_similarities", [])
+        }
+        # In case some old items had hit_rate stored as percentage in the list
+        if res_defaults["hit_rate"] > 1.0:
+            res_defaults["hit_rate"] /= 100.0
+        normalized_results.append(res_defaults)
+
+    run["results"] = normalized_results
+    return run
+
+
 # ── Load Runs & History ────────────────────────────────────
 @st.cache_data(ttl=5)
 def load_all_runs():
@@ -60,7 +134,7 @@ def load_all_runs():
         try:
             with open(f, "r", encoding="utf-8") as fp:
                 data = json.load(fp)
-            runs.append(data)
+            runs.append(normalize_run_data(data))
         except Exception as e:
             st.warning(f"Could not load {f}: {e}")
     return runs
@@ -74,7 +148,14 @@ def load_history_log():
     if os.path.exists(p):
         try:
             with open(p, "r", encoding="utf-8") as f:
-                return json.load(f)
+                history = json.load(f)
+            
+            # Map old metrics names to modern schema names
+            normalized_history = []
+            for r in history:
+                r = normalize_run_data(r)
+                normalized_history.append(r)
+            return normalized_history
         except Exception:
             return []
     return []
@@ -192,15 +273,28 @@ elif nav == "Metric Trends":
     st.caption("Visualizing performance regressions and QA improvements across multiple commit SHAs.")
     st.divider()
 
-    trend_data = history if history else [{
-        "timestamp": r.get("timestamp", ""),
-        "pass_rate": r.get("pass_rate", 0.0),
-        "avg_faithfulness": r.get("avg_faithfulness", 0.0),
-        "avg_correctness": r.get("avg_correctness", 0.0),
-        "p95_latency_sec": r.get("p95_latency_sec", 0.0),
-        "avg_retrieval_hit_rate": r.get("avg_retrieval_hit_rate", 1.0) * 100.0,
-        "avg_cost_usd": r.get("avg_cost_usd", 0.0)
-    } for r in runs]
+    raw_list = history if history else runs
+    trend_data = []
+    for r in raw_list:
+        # Normalize hit rate to percentage
+        hit_rate = r.get("avg_retrieval_hit_rate", 1.0)
+        if hit_rate <= 1.0:
+            hit_rate *= 100.0
+            
+        # Normalize faithfulness to percentage
+        faithfulness = r.get("avg_faithfulness", 1.0)
+        if faithfulness <= 1.0:
+            faithfulness *= 100.0
+
+        trend_data.append({
+            "timestamp": r.get("timestamp", ""),
+            "pass_rate": r.get("pass_rate", 0.0),
+            "avg_faithfulness": faithfulness,
+            "avg_correctness": r.get("avg_correctness", 0.0),
+            "p95_latency_sec": r.get("p95_latency_sec", 0.0),
+            "avg_retrieval_hit_rate": hit_rate,
+            "avg_cost_usd": r.get("avg_cost_usd", 0.0)
+        })
 
     if len(trend_data) > 1:
         df_trend = pd.DataFrame(trend_data)
@@ -209,7 +303,7 @@ elif nav == "Metric Trends":
         with t1:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["pass_rate"], name="Pass Rate (%)", line=dict(color="#6366f1", width=3)))
-            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_faithfulness"]*100, name="Faithfulness (%)", line=dict(color="#10b981", dash="dash")))
+            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_faithfulness"], name="Faithfulness (%)", line=dict(color="#10b981", dash="dash")))
             fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_retrieval_hit_rate"], name="Retrieval Hit Rate (%)", line=dict(color="#f59e0b", dash="dot")))
             fig.update_layout(height=400, template="plotly_dark", xaxis_title="Run Timestamp", yaxis_title="Percentage (%)")
             st.plotly_chart(fig, use_container_width=True)

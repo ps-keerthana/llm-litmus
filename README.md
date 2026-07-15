@@ -1,123 +1,283 @@
-# Production-Grade LLM Evaluation CI/CD Pipeline 🧪
+# LLM Eval Pipeline
 
-[![LLM Eval Pipeline](https://github.com/YOUR_USERNAME/llm-eval-pipeline/actions/workflows/eval.yml/badge.svg)](https://github.com/YOUR_USERNAME/llm-eval-pipeline/actions)
-
-An automated RAG evaluation framework that acts like unit tests for AI. Every time a prompt changes, a RAG chunk is updated, or tax rules are modified, this pipeline runs a 204-question test suite, evaluates semantic quality, monitors hallucination rates and costs, and blocks merges if regression is detected.
-
----
-
-## 🎯 Why This Project Exists
-
-In standard software, we write unit tests because code behaves deterministically. In RAG (Retrieval-Augmented Generation) systems, it is incredibly easy to break quality silently:
-- Upgrading a retriever chunking strategy might introduce noisy context.
-- Adjusting a system prompt might cause the LLM to begin hallucinating details.
-- Changing a model parameter might double response latency or API costs.
-
-This project solves the "black box" problem by treating LLM evaluation as an automated CI/CD gate. It benchmarks a **204-question golden dataset** covering the complex, edge-case-heavy domain of **Indian Income Tax (Sections 80C, 80D, HRA, TDS)** to ensure no PR gets merged if quality decays.
+> **A production-grade, CI/CD-integrated evaluation platform for Retrieval-Augmented Generation (RAG) systems.**
+> Modelled after internal platforms at Braintrust, LangSmith, and Arize — designed to gate merges on real quality regressions, not just test coverage.
 
 ---
 
-## 🏗️ Architecture & Workflow
+## Overview
 
-```mermaid
-graph TD
-    A[Git Commit / PR] -->|Trigger| B[GitHub Actions Runner]
-    B -->|Setup Env| C[RAG Pipeline: rag_pipeline.py]
-    C -->|Retrieve context & generate answers| D[Golden Dataset: 204 QAs]
-    D -->|Evaluate Metrics| E[Metrics Engine: evaluate_dataset.py]
-    E -->|Compute Local Cosine Similarity| F[all-MiniLM-L6-v2 Embedder]
-    E -->|Compute LLM-as-a-Judge Relevancy & Faithfulness| G[Groq API: llama-3.1-8b-instant]
-    E -->|Log aggregates & append history| H[metrics_history.json]
-    H -->|Execute Gate Checks| I[CI Gate: ci_check.py]
-    I -->|Absolute / Regression limits exceeded| J[❌ Exit 1: Block Merge]
-    I -->|All gates passed| K[✅ Exit 0: Allow Merge]
-    H -->|Visualize & Sandbox| L[Streamlit Dashboard: dashboard.py]
+This project automates the evaluation of a RAG pipeline every time a prompt, model, or knowledge base changes — exactly like unit tests run when code changes.
+
+On every `git push` or Pull Request:
+1. **Runs the benchmark** against a curated 204-question tax Q&A golden dataset
+2. **Measures** hallucination rate, answer faithfulness, retrieval hit rate, latency percentiles (p50/p95/p99), and cost per query
+3. **Blocks the merge** if any metric regresses beyond the configured SLA bounds
+4. **Tracks history** to visualize whether the system is improving or degrading over time
+5. **Posts a full quality report** as a PR comment and GitHub Actions step summary
+
+---
+
+## Architecture
+
+```
+llm-eval-pipeline/
+│
+├── config.py                  # Central configuration: paths, models, thresholds, pricing
+│
+├── core/                      # Core evaluation library
+│   ├── retrieval.py           # ChromaDB vector store, document loading, retrieval metrics
+│   ├── generator.py           # Groq API client (lazy init), retry/backoff, token tracking
+│   ├── judge.py               # LLM-as-a-Judge: multi-dimensional JSON scoring
+│   ├── metrics.py             # Semantic similarity (cosine) via SentenceTransformers
+│   ├── reporter.py            # Metrics history logging, regression detection
+│   └── utils.py               # Cost calculation, Git SHA/branch tracking, logging
+│
+├── evaluate.py                # CLI evaluation runner (full or --smoke mode)
+├── ci_gate.py                 # CI quality gate: loads runs, checks thresholds, writes report
+├── generate_dataset.py        # Tool to expand the golden dataset using Groq synthesis
+│
+├── golden_dataset.csv         # 204-question benchmark with structured metadata
+├── docs/                      # Knowledge base corpus (.txt files)
+├── eval_results/              # Per-run evaluation JSON outputs
+├── metrics_history.json       # Aggregated trend log across all runs
+│
+├── dashboard/
+│   └── app.py                 # Multi-page Streamlit diagnostic dashboard
+│
+└── .github/workflows/
+    └── eval.yml               # GitHub Actions CI/CD workflow
 ```
 
 ---
 
-## 📊 Evaluation Metrics Matrix
+## Evaluation Metrics
 
-Instead of naive string matching, this engine uses a multi-layered evaluation framework:
-
-| Metric | Mechanism | Purpose | Why It Matters |
-| :--- | :--- | :--- | :--- |
-| **Semantic Relevancy** | Cosine Similarity of local SentenceTransformer (`all-MiniLM-L6-v2`) embeddings + LLM-as-a-Judge grading | Evaluates if the generated answer covers the meaning of the ground truth. | Word-overlap (Jaccard) fails if the LLM paraphrases or uses synonyms. |
-| **Faithfulness** | LLM-as-a-Judge checking if every claim is grounded *only* in retrieved context | Directly detects hallucinations or external info leaks. | Traditional NLP metrics (ROUGE, BLEU) cannot measure factuality. |
-| **SLA Latency** | `p50` (median) and `p95` percentile tracking | Monitors response times of the slowest 5% of queries. | Average latency hides spikes. `p95` is critical for production SLAs. |
-| **Query Cost** | Input/Output token tracking via Groq usage API | Calculates actual API spend per query and per run. | Prevents prompt bloating or verbose model choices from exceeding budgets. |
-
----
-
-## 🇮🇳 The Benchmark Domain: Indian Income Tax
-
-To prove this evaluation framework under real-world complexity, the RAG knowledge base covers **Indian Income Tax Rules (FY 2024-25 / AY 2025-26)**:
-- **Exemptions & slabs**: Metro vs. non-metro HRA calculations, Old vs. New tax regime slab exemptions, and age-based basic exemption limits.
-- **Sections 80C & 80D**: Limits, lock-ins (PPF vs. ELSS), qualifying expenses (tuition fee exclusions), senior citizen medical allowances.
-- **TDS Thresholds**: Salary (Sec 192), FD interest (Sec 194A), Rent (Sec 194I / 194IB), Professional Fees (Sec 194J), and Form 15G/15H rules.
-
-The **204-question golden dataset** consists of:
-- `factual`: Direct rule lookup (e.g. "What is the max 80C deduction?").
-- `reasoning`: Multi-clause tax scenarios (e.g. "I earn 12 LPA, have 1.5L in 80C, which regime should I choose?").
-- `edge_case`: Nuanced tax scenarios (e.g. "I pay rent to my mother, can I claim HRA?").
-- `out_of_scope`: Off-topic queries to test correct LLM refusals (e.g. "What is GST on electronics?").
+| Metric | Description | SLA Threshold |
+|---|---|---|
+| **Pass Rate** | % of queries graded as correct by LLM judge | ≥ 70% |
+| **Hallucination Rate** | Avg judge score for unfaithful output | ≤ 0.05 |
+| **p95 Latency** | 95th percentile end-to-end query time | ≤ 3.5s |
+| **Retrieval Hit Rate** | % of queries with correct source document retrieved | ≥ 80% |
+| **MRR** | Mean Reciprocal Rank of retrieved documents | tracked |
+| **Faithfulness** | LLM judge score for context-groundedness (0–1) | tracked |
+| **Cost / Query** | USD cost of a single evaluation query | tracked |
 
 ---
 
-## ⚡ CI/CD Quality Gate & Regression Control
+## LLM-as-a-Judge
 
-The [ci_check.py](ci_check.py) script acts as the automated gatekeeper. It runs on every pull request and validates:
-1. **Absolute Thresholds**:
-   - Pass Rate $\ge 70.0\%$
-   - Hallucination Rate $\le 5.0\%$ (Faithfulness $\ge 95.0\%$)
-   - p95 Latency $\le 3.5\text{ seconds}$
-2. **Regression Check (Comparison vs. Previous Run)**:
-   - Blocks merge if the pass rate regresses by $> 5.0\%$.
-   - Blocks merge if average hallucination increases by $> 2.0\%$.
-   - Blocks merge if p95 latency slows down by $> 15\%$.
-   - Blocks merge if average cost per query increases by $> 20\%$.
+Instead of fragile word-overlap heuristics (BLEU/ROUGE), the pipeline uses **Groq itself as a judge**. For each query it generates a structured JSON score across 6 dimensions:
 
----
-
-## 🎛️ Streamlit Dashboard & Sandbox Playground
-
-Launch the dashboard to monitor system health:
-```powershell
-python -m streamlit run dashboard.py
+```json
+{
+  "correctness":   0.9,
+  "faithfulness":  1.0,
+  "completeness":  0.8,
+  "hallucination": 0.0,
+  "confidence":    0.9,
+  "reasoning":     "Answer correctly identifies 80C limit as Rs 1.5L and cites the context."
+}
 ```
 
-It features three modules:
-1. **Run History & Trends**: Historical tracking of pass rates, semantic quality, and latencies over time read directly from the git-tracked `metrics_history.json`.
-2. **Run Comparison Matrix**: Select any baseline run (A) and candidate run (B) to see a comparative metric dashboard and a diff list of regressions (passing cases that now fail) or improvements.
-3. **Prompt Sandbox Playground**: Edit system prompts, modify parameters (temperature, top-k chunks), execute custom queries live against the vector store, and view real-time token counts, costs, and LLM-judge feedback.
+Queries with semantic similarity ≥ 0.90 skip the LLM judge to conserve API rate limits on Groq's free tier.
 
 ---
 
-## ⚙️ Quick Start
+## Golden Dataset
 
-### 1. Prerequisites
-- Python 3.11+
-- Groq API Key (added to your `.env` file as `GROQ_API_KEY`)
+`golden_dataset.csv` contains **204 curated Indian income tax Q&A pairs** with full metadata:
 
-### 2. Setup
-```powershell
-# Clone the repository
-git clone https://github.com/YOUR_USERNAME/llm-eval-pipeline.git
+| Column | Description |
+|---|---|
+| `unique_id` | Stable identifier (e.g. `Q001`) |
+| `question` | The benchmark query |
+| `ground_truth` | Expected correct answer |
+| `category` | `factual`, `edge_case`, or `out_of_scope` |
+| `difficulty` | `easy`, `medium`, or `hard` |
+| `tags` | Relevant topic tags |
+| `expected_sources` | Source document file that should be retrieved |
+| `reasoning_type` | `direct_lookup`, `multi_step`, `comparative`, `negation`, `numerical` |
+| `version` | Dataset version for tracking |
+| `evaluation_notes` | Human-annotated notes for difficult edge cases |
+
+---
+
+## CI/CD Pipeline
+
+The GitHub Actions workflow (`.github/workflows/eval.yml`) runs on every push to `main` and every PR:
+
+```
+git push
+    │
+    ▼
+[evaluate.py --smoke]          ← Runs 32 balanced queries (seed=42)
+    │
+    ▼
+[ci_gate.py]                   ← Checks absolute thresholds + regression detection
+    │
+    ├── PASS → merge allowed
+    │          eval_summary.md posted as PR comment
+    │
+    └── FAIL → merge blocked
+               regression details posted to PR + step summary
+```
+
+**Auto-commits** `metrics_history.json` back to `main` on successful runs (with `[skip ci]` to prevent loops).
+
+---
+
+## Regression Detection
+
+`ci_gate.py` compares the latest run against the previous run across all key metrics. A build **fails** if:
+
+- Pass rate drops by more than **5 percentage points**
+- Hallucination rate increases by more than **0.02 (absolute)**
+- p95 latency increases by more than **15%** or **0.3s absolute**
+- Avg cost increases by more than **20%**
+- Retrieval hit rate drops by more than **5 percentage points**
+
+All thresholds are configurable in `config.py`.
+
+---
+
+## Streamlit Dashboard
+
+The multi-page diagnostic dashboard provides a live view of evaluation health:
+
+```bash
+streamlit run dashboard/app.py
+```
+
+**Pages:**
+
+| Page | What it shows |
+|---|---|
+| **Overview & KPI Matrix** | Core metrics, delta vs previous run, failure breakdown |
+| **Metric Trends** | Multi-run historical charts for quality & performance |
+| **Regression Analysis** | Side-by-side run comparison, per-question regressions |
+| **Failure Explorer** | Searchable failure database with full trace reproduction |
+| **Retrieval Inspector** | Visual chunk flow: Question → Retrieved Chunks → Answer |
+| **Cost Analytics** | Total cost, cost by category, most expensive queries |
+| **Latency Analytics** | p50/p95/p99 percentile charts, distribution histograms |
+| **Prompt Playground** | Interactive sandbox: test prompts, top-k, temperature live |
+| **Dataset Explorer** | Filterable view of the full 204-question benchmark |
+
+---
+
+## Quick Start
+
+### 1. Clone & Set Up
+
+```bash
+git clone https://github.com/ps-keerthana/llm-litmus.git
 cd llm-eval-pipeline
-
-# Create and activate virtual environment
 python -m venv venv
-.\venv\Scripts\activate
-
-# Install dependencies
+.\venv\Scripts\activate        # Windows
 pip install -r requirements.txt
 ```
 
-### 3. Run Pipeline
-```powershell
-# Run the evaluation suite on the 204 questions
-python evaluate_dataset.py
+### 2. Configure API Key
 
-# Run the quality gate check
-python ci_check.py
+```bash
+# Windows
+$env:GROQ_API_KEY = "gsk_..."
+
+# Or create a .env file
+echo GROQ_API_KEY=gsk_... > .env
 ```
+
+### 3. Run Evaluation
+
+```bash
+# Full evaluation (204 questions — may take 10–15 min on free tier due to rate limits)
+python evaluate.py
+
+# Smoke test (32 balanced questions, ~3 min)
+python evaluate.py --smoke
+```
+
+### 4. Check Quality Gate
+
+```bash
+python ci_gate.py
+```
+
+### 5. Launch Dashboard
+
+```bash
+streamlit run dashboard/app.py
+```
+
+---
+
+## Rate Limit Handling
+
+The pipeline is built for Groq's **free tier (6,000 TPM)**:
+
+- **Automatic retry** with 12-second backoff on `429 RateLimitError` (up to 5 attempts)
+- **Sleep-time subtraction**: cumulative API sleep is tracked and excluded from latency metrics
+- **Smoke mode** (`--smoke`): runs only 32 deterministic queries to fit within CI rate limits
+- **Judge bypass**: queries with semantic similarity ≥ 0.90 skip the LLM judge to save tokens
+
+---
+
+## Configuration
+
+All tunable parameters are centralized in [`config.py`](config.py):
+
+```python
+# Model selection
+MODEL_NAME = "llama-3.1-8b-instant"
+EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
+
+# Groq pricing (USD per 1M tokens)
+PRICE_INPUT_1M = 0.05
+PRICE_OUTPUT_1M = 0.08
+
+# Quality SLA thresholds
+THRESHOLD_PASS_RATE = 70.0
+THRESHOLD_HALLUCINATION = 0.05
+THRESHOLD_P95_LATENCY = 3.5
+THRESHOLD_RETRIEVAL_HIT_RATE = 80.0
+
+# Regression detection limits
+REGRESSION_LIMIT_PASS_RATE = 5.0
+REGRESSION_LIMIT_HALLUCINATION = 0.02
+REGRESSION_LIMIT_P95_LATENCY_PERCENT = 15.0
+```
+
+---
+
+## Expanding the Dataset
+
+To synthesize new benchmark questions from the `docs/` corpus:
+
+```bash
+python generate_dataset.py
+```
+
+This uses Groq to generate structured Q&A pairs with full metadata, aligned with the dataset schema.
+
+---
+
+## Tech Stack
+
+| Component | Technology |
+|---|---|
+| LLM Inference | [Groq](https://groq.com) (`llama-3.1-8b-instant`) |
+| Embedding Model | `sentence-transformers/all-MiniLM-L6-v2` |
+| Vector Store | [ChromaDB](https://www.trychroma.com) (in-memory) |
+| Dashboard | [Streamlit](https://streamlit.io) + [Plotly](https://plotly.com) |
+| CI/CD | GitHub Actions |
+| Evaluation Framework | Custom (modelled after Braintrust/LangSmith patterns) |
+
+---
+
+## Inspiration
+
+This project is inspired by how production ML teams evaluate LLM systems:
+
+- **[Braintrust](https://www.braintrustdata.com)** — Dataset management, LLM-as-a-judge, regression scoring
+- **[LangSmith](https://smith.langchain.com)** — Trace visualization, evaluation datasets, CI integration
+- **[Arize AI](https://arize.com)** — Retrieval diagnostics, embedding drift, latency SLAs

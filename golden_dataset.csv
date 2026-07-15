@@ -1,27 +1,205 @@
 question,ground_truth,category,difficulty
-What is the return policy?,We offer a 30-day return policy for all products. No receipt is needed for returns under 500 rupees. Items must be in original condition.,factual,easy
-How many days do I have to return a product?,30 days.,factual,easy
-Do I need a receipt to return something?,No receipt is needed for returns under 500 rupees.,factual,easy
-What condition must items be in for a return?,Items must be in original condition.,factual,easy
-What are the working hours of support?,The support team works Monday to Saturday 9 AM to 6 PM IST.,factual,easy
-Is support available on Sundays?,No. The support team is closed on Sundays and national holidays.,factual,easy
-What time does support open?,9 AM IST.,factual,easy
-What time does support close?,6 PM IST.,factual,easy
-How long does standard delivery take?,3 to 5 business days.,factual,easy
-How long does express delivery take?,1 to 2 business days.,factual,easy
-What is the cost of express delivery?,Express delivery costs an additional 99 rupees.,factual,easy
-What payment methods are accepted?,"UPI, credit cards, debit cards, net banking, and cash on delivery.",factual,easy
-Is UPI accepted as a payment method?,Yes UPI is accepted.,factual,easy
-Is cash on delivery available?,Yes cash on delivery is available.,factual,easy
-What is the minimum order amount for EMI?,EMI is available on orders above 2000 rupees.,factual,easy
-How do I track my order?,Visit the website and enter your order ID in the Track Order section.,factual,easy
-Will I get SMS updates for my order?,Yes you will receive SMS updates.,factual,easy
-How long after placing an order can I cancel it?,Orders can be cancelled within 2 hours of placing them.,factual,easy
-What happens if I try to cancel after the order is dispatched?,Cancellation is not possible if the order has been dispatched.,factual,easy
-Can I cancel an order after 2 hours?,Only if the order has not been dispatched yet.,factual,medium
-Do you deliver on Sundays?,There is no mention of Sunday delivery. Support is closed on Sundays but delivery days are not specified.,edge_case,medium
-What if I want to return something worth 600 rupees without a receipt?,The no-receipt policy applies only to returns under 500 rupees. For items above that a receipt may be needed.,edge_case,medium
-Can I pay part of my order with UPI and part with cash on delivery?,The document does not mention split payment methods.,edge_case,medium
-Is there a customer support phone number?,The document does not provide a phone number.,out_of_scope,medium
-What is the price of your products?,The document does not contain pricing information.,out_of_scope,easy
-Do you have a loyalty program?,The document does not mention a loyalty program.,out_of_scope,easy
+What is the basic exemption limit under the old tax regime for individuals below 60?,Rs 2.5 lakh is exempt from tax under the old regime for individuals below 60 years.,factual,easy
+What is the tax rate for income between Rs 5 lakh and Rs 10 lakh under the old regime?,Income from Rs 5 lakh to Rs 10 lakh is taxed at 20% under the old regime.,factual,easy
+What is the tax rate for income above Rs 10 lakh under the old regime?,Income above Rs 10 lakh is taxed at 30% under the old regime.,factual,easy
+What is the rebate available under Section 87A in the old regime?,A rebate of up to Rs 12500 is available under Section 87A if total income does not exceed Rs 5 lakh.,factual,easy
+What is the basic exemption limit under the new tax regime?,Income up to Rs 3 lakh is exempt under the new tax regime.,factual,easy
+Up to what income is the rebate under Section 87A available in the new regime?,Under the new regime a rebate under Section 87A is available for income up to Rs 7 lakh making it effectively tax-free.,factual,easy
+What is the tax rate for income from Rs 7 lakh to Rs 10 lakh under the new regime?,Income from Rs 7 lakh to Rs 10 lakh is taxed at 10% under the new regime.,factual,easy
+What is the tax rate for income from Rs 12 lakh to Rs 15 lakh under the new regime?,Income from Rs 12 lakh to Rs 15 lakh is taxed at 20% under the new regime.,factual,medium
+Which tax regime is the default from FY 2023-24?,The new tax regime is the default regime from FY 2023-24 onwards.,factual,easy
+Are deductions like 80C and 80D available under the new regime?,No most deductions like 80C 80D and HRA exemption are NOT available under the new regime.,factual,easy
+What is the basic exemption limit for senior citizens under the old regime?,Senior citizens aged 60 to 80 years get a higher basic exemption limit of Rs 3 lakh under the old regime.,factual,easy
+What is the exemption limit for super senior citizens under the old regime?,Super senior citizens aged 80 years and above get a basic exemption limit of Rs 5 lakh under the old regime.,factual,easy
+Are the new regime slabs different for senior citizens?,No under the new regime the slabs are the same for all age groups regardless of senior citizen status.,factual,medium
+What is PAN?,PAN is a 10-digit alphanumeric identifier issued by the Income Tax Department called Permanent Account Number.,factual,easy
+Is PAN mandatory for opening a bank account?,PAN is mandatory for opening bank accounts with deposits exceeding Rs 50000.,factual,easy
+Can Aadhaar be used instead of PAN?,Aadhaar can be used as a substitute for PAN in certain cases after linking.,factual,easy
+What is the due date for ITR filing for salaried individuals?,The due date for filing income tax returns for salaried individuals is July 31 of the assessment year.,factual,easy
+What is the due date for businesses requiring audit?,For businesses requiring audit the due date is October 31.,factual,easy
+Can a belated return be filed and when?,A belated return can be filed by December 31 of the assessment year with a penalty.,factual,medium
+What is the threshold for mandatory electronic filing?,If total income exceeds Rs 5 lakh the return must be filed electronically.,factual,medium
+Who can file paper returns?,If income is below Rs 5 lakh and the person is a super senior citizen aged 80 plus years the return can be filed in paper form.,factual,medium
+What is the advance tax threshold?,Any person whose estimated tax liability for the year exceeds Rs 10000 must pay advance tax.,factual,easy
+What are the advance tax installment deadlines?,Advance tax is paid in 4 installments: 15% by June 15 and 45% by September 15 and 75% by December 15 and 100% by March 15.,factual,medium
+Are senior citizens exempt from advance tax?,Senior citizens not having income from business or profession are exempt from paying advance tax.,factual,medium
+What is the standard deduction for salaried employees?,A standard deduction of Rs 50000 is available to all salaried employees and pensioners.,factual,easy
+Is the standard deduction available under both regimes?,Yes the standard deduction is available under both the old and new tax regimes.,factual,easy
+Is any proof required for standard deduction?,No bills or proof of expenses are required to claim the standard deduction.,factual,easy
+What is the maximum deduction under Section 80C?,Section 80C allows a maximum deduction of Rs 1.5 lakh per financial year.,factual,easy
+Is Section 80C available under the new regime?,No Section 80C deduction is available only under the old tax regime.,factual,easy
+What investments qualify under 80C?,PPF EPF ELSS NSC 5-year FDs life insurance premiums tuition fees and home loan principal repayment qualify under 80C.,factual,easy
+What is the lock-in period for ELSS?,ELSS has a lock-in period of 3 years which is the shortest among all 80C investments.,factual,easy
+What is the lock-in period for PPF?,PPF has a lock-in period of 15 years.,factual,easy
+Is PPF interest taxable?,No PPF interest and maturity amount are completely tax-free with EEE status.,factual,easy
+Are ELSS gains taxable?,Yes ELSS long-term capital gains above Rs 1 lakh in a year are taxed at 10%.,factual,medium
+What is the current PPF interest rate?,The current PPF interest rate is set by the government quarterly and is around 7.1% per annum.,factual,easy
+What is the additional NPS deduction under 80CCD(1B)?,An additional deduction of Rs 50000 is available under Section 80CCD(1B) specifically for NPS contributions over and above the Rs 1.5 lakh limit.,factual,easy
+What is the total possible deduction through 80C and NPS combined?,The total possible deduction through 80C and 80CCD(1B) combined is Rs 2 lakh.,factual,medium
+Is the employer NPS contribution deduction available in the new regime?,Yes the 80CCD(2) employer NPS contribution deduction is available under both old and new tax regimes.,factual,medium
+What is the employer NPS deduction limit for private sector?,Employer NPS contributions are deductible under 80CCD(2) up to 10% of salary for private sector employees.,factual,medium
+What is the employer NPS deduction limit for government employees?,Employer NPS contributions are deductible up to 14% for government employees.,factual,medium
+What happens if you sell a house within 5 years of claiming 80C?,If the property is sold within 5 years of possession the 80C deduction claimed will be reversed and added back to income in the year of sale.,factual,hard
+Can stamp duty be claimed under 80C?,Yes stamp duty and registration charges paid for purchase of a house property are deductible under 80C in the year they are paid.,factual,medium
+How many children's tuition fees can be claimed under 80C?,Tuition fees for up to 2 children for full-time education in India qualify for deduction under 80C.,factual,easy
+Can both parents claim tuition fee deduction?,Yes both parents can claim the deduction for 2 children each effectively covering 4 children per family.,factual,medium
+Does hostel fee qualify under 80C tuition fee deduction?,No only tuition fees are allowed. Development fees transport fees hostel fees donations and private tuitions do not qualify.,factual,medium
+Can I claim tuition fee deduction for my own education?,No the tuition fee deduction is available for the assessee's children only not for the assessee's own education.,factual,medium
+What is the maximum 80D deduction for self and family?,For self spouse and dependent children the maximum 80D deduction is Rs 25000 per year.,factual,easy
+What is the 80D limit if the insured is a senior citizen?,If the insured person is a senior citizen aged 60 or above the limit increases to Rs 50000.,factual,easy
+What is the maximum total 80D deduction possible?,The maximum total 80D deduction possible is Rs 1 lakh when both taxpayer and parents are senior citizens.,factual,medium
+Is Section 80D available under the new regime?,No Section 80D deduction is available only under the old tax regime.,factual,easy
+What is the preventive health checkup deduction limit?,A deduction of up to Rs 5000 per year is allowed for preventive health checkup within the overall 80D limits.,factual,easy
+Is the preventive health checkup deduction in addition to the 80D limit?,No the Rs 5000 is included within the Rs 25000 or Rs 50000 limits not in addition to them.,factual,medium
+Can preventive health checkup be paid in cash?,Yes payment for preventive health checkup can be made in cash unlike the premium which must be paid through non-cash modes.,factual,medium
+Can an uninsured senior citizen claim 80D?,Yes an uninsured senior citizen can claim a deduction of up to Rs 50000 for medical expenses actually incurred.,factual,medium
+What is the 80DD deduction for disabled dependents?,The deduction under 80DD is Rs 75000 for disability of 40% or more and Rs 1.25 lakh for severe disability of 80% or more.,factual,medium
+What diseases qualify under Section 80DDB?,Section 80DDB covers cancer AIDS chronic renal failure hemophilia and thalassemia.,factual,medium
+What is the 80DDB limit for individuals below 60?,The maximum 80DDB deduction for individuals below 60 years is Rs 40000.,factual,medium
+What is the 80DDB limit for senior citizens?,For senior citizens aged 60 plus the maximum 80DDB deduction is Rs 1 lakh.,factual,medium
+Is HRA exemption available under the new regime?,No HRA exemption is NOT available under the new tax regime.,factual,easy
+What are the three conditions to claim HRA?,The employee must receive HRA as part of salary must be paying rent and must not own the house they live in.,factual,easy
+How is HRA exemption calculated?,HRA exemption is the minimum of actual HRA received or 50% of basic plus DA for metro (40% for non-metro) or actual rent minus 10% of basic plus DA.,factual,medium
+Which cities are considered metro for HRA?,Delhi Mumbai Chennai and Kolkata are considered metro cities for HRA calculation.,factual,easy
+What happens to excess HRA above the exempt amount?,The remaining HRA above the exempt amount is added to taxable income.,factual,medium
+When is landlord's PAN required for HRA?,If rent paid exceeds Rs 1 lakh per year the tenant must provide the landlord's PAN to the employer.,factual,medium
+Can I claim HRA by paying rent to my parents?,Yes an employee can claim HRA exemption by paying rent to their parents and the parent must include this rental income in their own tax return.,factual,medium
+Can I claim HRA by paying rent to my spouse?,No paying rent to a spouse is NOT allowed for HRA exemption as per income tax rules.,factual,medium
+What is Section 80GG?,Section 80GG allows deduction for rent paid when the employee does not receive HRA as part of salary.,factual,medium
+What is the maximum monthly deduction under 80GG?,The maximum deduction under 80GG is Rs 5000 per month.,factual,easy
+Is 80GG available under the new regime?,No Section 80GG is available only under the old tax regime.,factual,easy
+Can I claim HRA while working from home?,Yes if an employee works from home and pays rent they can still claim HRA as long as they receive HRA and don't own the property.,factual,medium
+What is TDS?,TDS means Tax Deducted at Source where the payer deducts tax before making payment.,factual,easy
+What is Form 16?,Form 16 is issued by the employer containing details of salary paid TDS deducted and deductions claimed. It has Part A with TDS certificate details and Part B with computation of income.,factual,easy
+At what rate is TDS deducted on FD interest?,Banks deduct TDS at 10% on fixed deposit interest if total interest exceeds Rs 40000 in a financial year.,factual,easy
+What is the FD interest TDS threshold for senior citizens?,For senior citizens the TDS threshold on FD interest is Rs 50000.,factual,easy
+What happens if PAN is not provided for FD TDS?,If the depositor does not provide PAN TDS is deducted at 20% instead of 10%.,factual,easy
+What is Form 15G?,Form 15G is submitted by individuals below 60 to avoid TDS on FD interest when total income is below the taxable limit.,factual,easy
+What is Form 15H?,Form 15H is submitted by senior citizens to avoid TDS on FD interest when total income is below the taxable limit.,factual,easy
+When is TDS on rent applicable?,TDS on rent is applicable when total rent paid during the financial year exceeds Rs 2.4 lakh.,factual,easy
+What is the TDS rate on rent for land and buildings?,The TDS rate on rent of land building furniture or fittings is 10%.,factual,easy
+What is the TDS rate on rent for machinery?,The TDS rate on rent of plant machinery or equipment is 2%.,factual,easy
+What is Section 194IB?,Section 194IB applies to individual or HUF tenants not subject to tax audit with TDS at 5% on monthly rent exceeding Rs 50000.,factual,medium
+What is the TDS rate on professional fees?,TDS at 10% is deducted on payments for professional services if the aggregate exceeds Rs 30000 during the year.,factual,easy
+What is Form 26AS?,Form 26AS is an annual consolidated tax statement showing all TDS deducted against the taxpayer's PAN during the financial year.,factual,easy
+How long does an income tax refund typically take?,Refunds are typically processed within 4 to 6 weeks of filing the return electronically.,factual,easy
+What interest is paid on income tax refunds?,Interest at 0.5% per month is paid on the refund amount.,factual,medium
+I earn Rs 6 lakh per year. Which regime saves more tax?,Under the old regime with 80C deduction of Rs 1.5 lakh your taxable income would be Rs 4.5 lakh with zero tax after 87A rebate. Under the new regime Rs 6 lakh is also tax-free due to the Rs 7 lakh rebate. Both regimes result in zero tax but the old regime requires investments.,reasoning,medium
+I earn Rs 12 LPA with no investments. Should I choose old or new regime?,With no investments or deductions the new regime is better because it has lower slab rates and you cannot benefit from 80C or 80D without making qualifying investments.,reasoning,medium
+Can I claim both 80C and 80CCD(1B)?,Yes you can claim Rs 1.5 lakh under 80C and an additional Rs 50000 under 80CCD(1B) for NPS for a total of Rs 2 lakh.,reasoning,medium
+I am 62 years old. What is my maximum 80D deduction for self plus parents aged 85?,As a senior citizen your self deduction limit is Rs 50000. Your parents are super senior citizens so their limit is also Rs 50000. Maximum total is Rs 1 lakh.,reasoning,hard
+Can I claim both HRA and home loan deduction?,Yes you can claim HRA exemption if you live in a rented house and simultaneously claim home loan interest deduction under Section 24 for a property you own in a different city. Both can be claimed together.,reasoning,hard
+My rent is Rs 15000 per month and my basic salary is Rs 30000. I live in Delhi. What is my HRA exemption?,Actual HRA depends on what your employer pays. Assuming HRA equals 50% of basic (Rs 15000): the three values are 1) Actual HRA Rs 15000 2) 50% of basic for metro Rs 15000 3) Rent minus 10% of basic = Rs 15000 minus Rs 3000 = Rs 12000. The minimum is Rs 12000 per month.,reasoning,hard
+I have two children in school. Can I claim tuition fees for both plus PPF and ELSS under 80C?,Yes all of these qualify under 80C but the total combined deduction across all 80C investments cannot exceed Rs 1.5 lakh.,reasoning,medium
+Should I invest in ELSS or PPF for tax saving?,ELSS has a shorter 3-year lock-in versus PPF's 15 years but ELSS returns are market-linked and not guaranteed. PPF offers guaranteed returns and is fully tax-free. The choice depends on your risk appetite and investment horizon.,reasoning,medium
+I sold my house 3 years after purchase. What happens to my 80C claim?,If the property is sold within 5 years of possession the 80C deduction claimed for stamp duty and principal repayment will be reversed and added back to your income in the year of sale.,reasoning,hard
+My total FD interest across banks is Rs 45000. Will TDS be deducted?,TDS is deducted per bank not across banks. If interest from any single bank exceeds Rs 40000 (Rs 50000 for senior citizens) that bank will deduct TDS.,reasoning,medium
+I pay rent of Rs 8000 per month to my mother. Can I claim HRA?,Yes you can claim HRA by paying rent to your mother. She must declare the rental income in her tax return. A rental agreement and bank transfer proof are recommended.,reasoning,medium
+I am a salaried employee with no investments. What deductions can I claim in the new regime?,Under the new regime you can claim the standard deduction of Rs 50000 and employer NPS contribution under 80CCD(2). Most other deductions are not available.,reasoning,medium
+My employer contributes 10% of my basic to NPS. My basic is Rs 50000. What deduction do I get?,Your employer's NPS contribution of Rs 5000 per month (Rs 60000 per year) is deductible under 80CCD(2) with no upper monetary limit and is available under both regimes.,reasoning,medium
+Can I submit Form 15G if my income is Rs 4 lakh and I earn Rs 35000 FD interest?,Yes since your total income of Rs 4 lakh is below the taxable limit you can submit Form 15G to the bank to avoid TDS on FD interest.,reasoning,medium
+I am a 65-year-old pensioner. Do I need to pay advance tax?,No senior citizens not having income from business or profession are exempt from paying advance tax.,reasoning,easy
+My total income is Rs 4.8 lakh. Do I need to file ITR electronically?,No since your total income is below Rs 5 lakh you are not mandatorily required to file electronically. However if you are not a super senior citizen (80+) practical requirements may still apply.,reasoning,medium
+Is it better to invest Rs 50000 in NPS or Rs 50000 more in PPF for tax saving?,Rs 50000 in NPS gives an additional deduction under 80CCD(1B) over the Rs 1.5 lakh 80C limit. Rs 50000 more in PPF falls within the same Rs 1.5 lakh limit. If you've already exhausted 80C then NPS gives extra benefit.,reasoning,hard
+I am 58 and my wife is 61. What is our combined maximum 80D deduction?,You (below 60) can claim Rs 25000 for self and family. For parents the limit depends on their age. Your wife being a senior citizen doesn't help your limit since the 80D deduction is for the taxpayer's own policy. Your individual max is Rs 25000 for self plus Rs 25000 or Rs 50000 for parents depending on parent's age.,reasoning,hard
+Can a super senior citizen (82 years old) claim standard deduction on pension?,Yes the standard deduction of Rs 50000 is available to pensioners under both old and new tax regimes.,reasoning,easy
+I missed the July 31 deadline. Can I still file my return?,Yes you can file a belated return by December 31 of the assessment year with a penalty.,reasoning,easy
+I earn Rs 8 LPA and invest Rs 1.5 lakh in 80C and Rs 25000 in health insurance. Old or new regime?,Under old regime: taxable income = Rs 8L - Rs 1.5L (80C) - Rs 25K (80D) - Rs 50K (standard deduction) = Rs 4.75L which is tax-free after 87A rebate. Under new regime: Rs 8L - Rs 50K (standard deduction) = Rs 7.5L with some tax applicable. Old regime is clearly better here.,reasoning,hard
+What is the maximum deduction I can claim under 80C if I invested Rs 2 lakh in PPF?,The maximum deduction under 80C is limited to Rs 1.5 lakh regardless of the actual investment amount. The extra Rs 50000 invested will still earn returns but won't provide additional tax benefit under 80C.,reasoning,medium
+I pay rent of Rs 12000 but don't receive HRA from my employer. Can I get any deduction?,Yes you can claim deduction under Section 80GG for rent paid. The maximum is Rs 5000 per month under the old regime.,reasoning,medium
+Can I claim 80D deduction for health insurance of my married daughter?,No the 80D deduction for children is only for dependent children. A married daughter who is financially independent would not qualify.,reasoning,hard
+I am 63 years old and my parents are 88 and 85. What is my maximum 80D?,As a senior citizen your limit is Rs 50000 for self. Your parents are super senior citizens so even without insurance they can claim Rs 50000 for medical expenses. Maximum total is Rs 1 lakh.,edge_case,hard
+I paid Rs 1.2 lakh rent annually but don't have my landlord's PAN. Can I still claim HRA?,Since rent exceeds Rs 1 lakh per year the landlord's PAN is required. If the landlord does not have PAN a declaration with name and address details is needed. You can still claim HRA with the declaration.,edge_case,hard
+My employer NPS contribution is 15% of my basic. Can I claim the full amount under 80CCD(2)?,No for private sector employees the 80CCD(2) deduction is limited to 10% of salary (basic plus DA). The excess 5% contribution is not deductible.,edge_case,hard
+I have income from salary and a small business. Am I exempt from advance tax as a senior citizen?,No the advance tax exemption for senior citizens applies only if they do NOT have income from business or profession. Since you have business income you must pay advance tax.,edge_case,hard
+I want to claim 80C for tuition fees of my grandchild. Is this allowed?,No the tuition fee deduction under 80C is available only for the assessee's own children not grandchildren.,edge_case,medium
+Can I claim 80D deduction for health insurance premium paid in cash?,No the health insurance premium must be paid through non-cash modes like cheque bank transfer or digital payment. Only preventive health checkup can be paid in cash.,edge_case,medium
+My FD interest is Rs 38000. Will the bank deduct TDS?,No TDS on FD interest is deducted only when the total interest from that bank exceeds Rs 40000 (Rs 50000 for senior citizens) in a financial year.,edge_case,easy
+I work in Pune. What percentage of basic salary is used for HRA calculation?,Pune is a non-metro city so 40% of basic salary plus DA is used for HRA calculation.,edge_case,easy
+I invested in ELSS and want to withdraw after 2 years. Can I?,No ELSS has a mandatory lock-in period of 3 years. You cannot redeem before completing 3 years from the date of each SIP or lump sum investment.,edge_case,medium
+I own a house in Mumbai but pay rent in Bangalore for work. Can I claim HRA?,Yes you can claim HRA if you pay rent in the city where you work even if you own a house in another city. You can simultaneously claim home loan benefits on the owned property.,edge_case,hard
+I paid my spouse Rs 10000 per month as rent. Can I claim HRA?,No paying rent to a spouse is not allowed for HRA exemption as per income tax rules.,edge_case,medium
+Can I file my return in paper form if my income is Rs 4 lakh and I am 75 years old?,No paper filing is allowed only for super senior citizens aged 80 and above with income below Rs 5 lakh. At 75 you are a senior citizen but not a super senior citizen.,edge_case,hard
+I haven't paid any advance tax by September 15. What penalty do I face?,Failure to pay advance tax attracts interest under Section 234B for shortfall in advance tax and Section 234C for deferment of installments.,edge_case,medium
+My life insurance sum assured is Rs 5 lakh and I pay Rs 60000 premium. How much can I claim under 80C?,For policies issued after April 2012 the premium eligible for 80C is limited to 10% of sum assured. So only Rs 50000 of your Rs 60000 premium is eligible under 80C.,edge_case,hard
+I have 3 children in school. Can I claim tuition fees for all three?,No the tuition fee deduction under 80C is limited to 2 children per parent. However if both parents are taxpayers each can claim for 2 children covering up to 4 children.,edge_case,medium
+Can I invest in PPF and claim deduction under the new regime?,You can invest in PPF but you cannot claim the 80C deduction under the new tax regime. The investment itself is valid but provides no tax benefit under the new regime.,edge_case,medium
+I paid Rs 6000 for a preventive health checkup. How much can I claim under 80D?,Only Rs 5000 can be claimed for preventive health checkup and this is within the overall 80D limits of Rs 25000 or Rs 50000 not in addition to them.,edge_case,medium
+My disability is certified at 35%. Can I claim deduction under 80DD?,No Section 80DD requires a minimum disability of 40% or more. A disability of 35% does not qualify for the deduction.,edge_case,hard
+I am self-employed and pay rent of Rs 60000 per month. Do I need to deduct TDS?,Under Section 194IB for individual tenants not subject to tax audit TDS at 5% must be deducted on monthly rent exceeding Rs 50000.,edge_case,medium
+Can I use my Aadhaar number instead of PAN for filing ITR?,Aadhaar can be used as a substitute for PAN in certain cases after linking. However it is recommended to have PAN for income tax filing.,edge_case,medium
+I received Rs 2 lakh from surrendering my pension fund. Is it taxable?,Yes any amount received from the pension fund under 80CCC on surrender or maturity is taxable in the year of receipt.,edge_case,hard
+I work from home in a small town and receive HRA. Does the metro rate apply?,No the metro rate of 50% applies only to Delhi Mumbai Chennai and Kolkata. For a small town the non-metro rate of 40% applies.,edge_case,easy
+My employer does not give me Form 16. How can I verify my TDS?,You can check Form 26AS which is an annual consolidated tax statement showing all TDS deducted against your PAN during the financial year. You can also check the Annual Information Statement.,edge_case,medium
+I paid professional fees of Rs 25000 to a lawyer. Do I need to deduct TDS?,No TDS on professional fees under Section 194J is applicable only when the aggregate payment exceeds Rs 30000 during the year.,edge_case,easy
+I paid medical expenses of Rs 60000 for my uninsured mother who is 65. Can I claim 80D?,Yes for uninsured senior citizen parents you can claim up to Rs 50000 under 80D for medical expenses actually incurred. You can claim Rs 50000.,edge_case,medium
+I have FDs in 3 different banks each paying Rs 35000 interest. Will TDS be deducted?,No TDS threshold of Rs 40000 is applied per bank. Since no single bank is paying more than Rs 40000 in interest no bank will deduct TDS.,edge_case,medium
+What is the GST rate on mobile phones?,The document does not contain information about GST rates. This is outside the scope of income tax provisions covered here.,out_of_scope,easy
+How do I register a company in India?,The document does not contain information about company registration. It covers individual income tax provisions only.,out_of_scope,easy
+What is the income tax rate in the United States?,The document covers Indian income tax only and does not contain information about US tax rates.,out_of_scope,easy
+How do I file GST returns?,The document does not cover GST filing. It is limited to income tax provisions deductions and TDS rules.,out_of_scope,easy
+What is the stamp duty rate in Maharashtra?,The document does not contain state-specific stamp duty rates. It only mentions that stamp duty qualifies for 80C deduction.,out_of_scope,easy
+Can I claim deduction for donations under Section 80G?,The document does not contain information about Section 80G donations. It covers Sections 80C 80D HRA and TDS.,out_of_scope,easy
+What is the capital gains tax on selling shares?,The document does not contain detailed capital gains tax provisions. It only mentions ELSS gains are taxed at 10% above Rs 1 lakh.,out_of_scope,medium
+How do I apply for a PAN card?,The document explains what PAN is and when it is required but does not cover the application process.,out_of_scope,easy
+What are the tax rules for NRIs?,The document covers tax provisions for resident individuals and does not specifically address NRI taxation rules.,out_of_scope,medium
+What is the corporate tax rate in India?,The document covers individual income tax provisions and does not contain corporate tax rates.,out_of_scope,easy
+How do I claim LTA (Leave Travel Allowance)?,The document does not contain information about LTA exemption. It covers HRA 80C 80D and TDS.,out_of_scope,easy
+What is the tax treatment of cryptocurrency?,The document does not cover cryptocurrency taxation. It is limited to traditional income tax provisions.,out_of_scope,medium
+Can I claim deduction for education loan interest?,The document does not cover Section 80E education loan interest deduction.,out_of_scope,medium
+What is professional tax?,The document does not contain information about professional tax which is a state-level tax.,out_of_scope,easy
+How do I link PAN with Aadhaar?,The document mentions Aadhaar can substitute PAN but does not explain the linking process.,out_of_scope,easy
+What deductions are available for home loan interest under Section 24?,The document mentions home loan principal under 80C but does not cover Section 24 home loan interest deduction in detail.,out_of_scope,medium
+What is the surcharge on income tax?,The document does not contain information about surcharges on income tax.,out_of_scope,medium
+How is agricultural income taxed?,The document does not cover agricultural income taxation.,out_of_scope,easy
+What is the rebate under 87A for someone earning Rs 7.5 lakh under the new regime?,Under the new regime the 87A rebate is available only for income up to Rs 7 lakh. At Rs 7.5 lakh the rebate is not available and tax would be calculated on the full income.,edge_case,hard
+I am 59 years old. Can I get the senior citizen exemption limit of Rs 3 lakh?,No the senior citizen exemption limit of Rs 3 lakh applies only to those aged 60 or above. At 59 your exemption limit is Rs 2.5 lakh under the old regime.,edge_case,medium
+My employer contributes to EPF. Does this count toward 80C?,Yes employer and employee EPF contributions count toward the 80C deduction limit of Rs 1.5 lakh.,factual,medium
+What is the combined limit of 80C 80CCC and 80CCD(1)?,The combined deduction under Section 80C 80CCC and 80CCD(1) cannot exceed Rs 1.5 lakh.,factual,medium
+I missed the advance tax deadline of June 15. What interest applies?,Interest under Section 234C for deferment of advance tax installments will apply. You should pay the shortfall along with the next installment.,edge_case,medium
+I am 80 years old with income of Rs 4.5 lakh. Can I file on paper?,Yes super senior citizens aged 80 and above with income below Rs 5 lakh can file income tax returns in paper form.,edge_case,easy
+I paid Rs 90000 rent and my basic is Rs 25000. I live in a non-metro city. Is my HRA fully exempt?,HRA exemption would be the minimum of: actual HRA received (depends on employer) or 40% of basic for non-metro = Rs 10000 per month or rent minus 10% of basic = Rs 90000/12 - Rs 2500 = Rs 5000 per month. The actual calculation depends on HRA received from employer.,edge_case,hard
+Can NPS withdrawal at maturity be claimed as tax-free?,The document mentions NPS deductions under 80CCD but does not cover the taxation of NPS withdrawal at maturity.,out_of_scope,medium
+I earn only rental income and no salary. Can I claim standard deduction?,No the standard deduction of Rs 50000 is available only to salaried employees and pensioners not to those with only rental or business income.,edge_case,medium
+My total income is Rs 2.4 lakh. Do I need to file ITR?,If your total income is below the basic exemption limit of Rs 2.5 lakh (old regime) or Rs 3 lakh (new regime) you are generally not required to file ITR. However filing is still recommended for claiming refunds or for record purposes.,reasoning,easy
+I invested Rs 1 lakh in ELSS and Rs 80000 in PPF this year. What is my 80C deduction?,Your total qualifying investments are Rs 1.8 lakh but the 80C deduction is capped at Rs 1.5 lakh. You can only claim Rs 1.5 lakh.,reasoning,medium
+Can I switch from new regime to old regime?,Salaried individuals can switch between regimes every year. However individuals with business income who opt out of the new regime can switch only once. The choice can be made while filing the return.,reasoning,medium
+I am 70 and have a business. My tax liability is Rs 15000. Must I pay advance tax?,Yes because you have business income the senior citizen advance tax exemption does not apply. You must pay advance tax since your liability exceeds Rs 10000.,reasoning,hard
+My bank deducted TDS of Rs 5000 on my FD interest but my total income is below taxable limit. What do I do?,You should file an income tax return to claim a refund of the TDS deducted. The refund will be processed by CPC typically within 4 to 6 weeks.,reasoning,easy
+I pay Rs 20000 rent monthly. My annual rent is Rs 2.4 lakh. As an individual tenant do I need to deduct TDS?,Since your annual rent is Rs 2.4 lakh which equals the threshold under Section 194I and your monthly rent is below Rs 50000 the TDS provisions under 194IB do not apply. However if your rent exceeds Rs 2.4 lakh per year you would need to deduct TDS.,reasoning,hard
+Is the Rs 50000 standard deduction auto-applied or do I need to claim it?,The standard deduction is automatically applied to salary income. No bills or proof of expenses are required. Your employer typically considers it when computing TDS.,factual,easy
+What is the penalty for filing a belated return?,The document mentions that a belated return can be filed by December 31 with a penalty but does not specify the exact penalty amount.,out_of_scope,medium
+I have 4 children. How many children's tuition fees can I and my spouse together claim?,Both parents can claim tuition fee deduction for 2 children each under 80C effectively covering all 4 children. Each parent's total 80C claim is still limited to Rs 1.5 lakh.,reasoning,medium
+I am a freelancer earning Rs 12 lakh. What TDS rate applies to my professional fees?,TDS at 10% will be deducted on your professional fees under Section 194J when the aggregate payment from a single client exceeds Rs 30000 in the year.,reasoning,medium
+Can I claim both 80C deduction and standard deduction in the old regime?,Yes in the old regime you can claim the standard deduction of Rs 50000 along with the 80C deduction of up to Rs 1.5 lakh and all other applicable deductions.,reasoning,easy
+Which has better returns ELSS or PPF?,ELSS returns are market-linked and historically average 12-15% but are not guaranteed. PPF offers guaranteed returns around 7.1%. ELSS has higher potential returns but with market risk while PPF is safe and completely tax-free.,reasoning,medium
+I work in Hyderabad. Is it metro or non-metro for HRA?,Hyderabad is a non-metro city for HRA purposes. Only Delhi Mumbai Chennai and Kolkata are classified as metro cities. The 40% rate applies.,edge_case,easy
+My employer doesn't offer NPS. Can I still get the 80CCD(1B) deduction?,Yes you can open an NPS account independently and invest up to Rs 50000 to claim the additional 80CCD(1B) deduction. This is not dependent on employer participation.,reasoning,medium
+What is the tax on Rs 15 lakh income under the new regime after standard deduction?,After Rs 50000 standard deduction taxable income is Rs 14.5 lakh. Tax calculation: Rs 3L exempt + Rs 4L at 5% (Rs 20000) + Rs 3L at 10% (Rs 30000) + Rs 2L at 15% (Rs 30000) + Rs 2.5L at 20% (Rs 50000) = Rs 1.3 lakh total tax approximately.,reasoning,hard
+I have disability of 45%. Can my parent claim 80DD for me?,Yes Section 80DD provides deduction for maintenance of disabled dependent including children. At 45% disability (above the 40% threshold) your parent can claim Rs 75000.,reasoning,medium
+I donated Rs 50000 to PM National Relief Fund. Can I claim deduction?,The document does not contain information about Section 80G charitable donations. Only Sections 80C 80D HRA and TDS are covered.,out_of_scope,easy
+What is the interest rate under Section 234B?,The document mentions that Section 234B applies for shortfall in advance tax but does not specify the exact interest rate.,out_of_scope,medium
+Can I open multiple PPF accounts?,The document covers PPF as a qualifying investment under 80C but does not discuss rules about opening multiple PPF accounts.,out_of_scope,easy
+Is gratuity taxable?,The document does not contain information about gratuity taxation.,out_of_scope,easy
+What is the maximum amount I can invest in PPF per year?,The document does not mention the annual PPF investment limit. It only covers PPF as a qualifying 80C investment.,out_of_scope,medium
+How is income from house property calculated?,The document does not cover income from house property computation. It mentions home loan principal under 80C only.,out_of_scope,medium
+I earn Rs 9 lakh and invest Rs 1.5 lakh in 80C and Rs 50000 in NPS. What is my taxable income under old regime?,Taxable income = Rs 9L - Rs 50K (standard deduction) - Rs 1.5L (80C) - Rs 50K (NPS 80CCD1B) = Rs 6.5 lakh under the old regime.,reasoning,hard
+What is the tax slab for income from Rs 3 lakh to Rs 7 lakh under the new regime?,Income from Rs 3 lakh to Rs 7 lakh is taxed at 5% under the new regime.,factual,easy
+I paid Rs 30000 for a health checkup and Rs 20000 as health insurance premium. What is my 80D deduction?,The health insurance premium of Rs 20000 qualifies under 80D. The preventive health checkup is capped at Rs 5000 within the overall limit. Your total 80D deduction would be Rs 25000 (Rs 20000 premium + Rs 5000 checkup within the Rs 25000 ceiling).,reasoning,hard
+What interest rate is charged under Section 234C for advance tax deferment?,The document mentions that Section 234C applies for deferment of advance tax installments but does not specify the exact interest rate.,out_of_scope,medium
+My son is studying abroad. Can I claim his tuition fee under 80C?,No the tuition fee deduction under 80C is only for education in India. Fees paid to foreign institutions do not qualify.,edge_case,hard
+I am 61 and my wife is 58. She has no income. Can I claim 80D for her health insurance?,Yes you can claim 80D deduction for health insurance premium paid for your spouse. Since you are a senior citizen the limit for self and family is Rs 50000.,reasoning,medium
+What is the TDS rate for technical services under Section 194J?,The TDS rate for fees for technical services other than professional services is 2% under Section 194J.,factual,medium
+I earned Rs 3.2 lakh from FD interest and have no other income. Should I submit Form 15G or 15H?,Since your total income of Rs 3.2 lakh is below the basic exemption limit you can submit Form 15G (if below 60) or Form 15H (if 60+) to avoid TDS deduction by the bank.,reasoning,easy
+My employer deducted excess TDS from my salary. How do I get it back?,You should file an income tax return showing the correct tax computation. The excess TDS will be refunded by CPC typically within 4 to 6 weeks. Verify TDS in Form 26AS before filing.,reasoning,easy
+Can I claim both 80D and 80DDB deductions?,Yes 80D covers health insurance premiums while 80DDB covers medical treatment of specified diseases. Both can be claimed simultaneously as they are separate sections.,reasoning,medium
+I invested in NSC. Is the interest earned taxable?,The document mentions NSC as a qualifying investment under 80C. NSC interest is taxable but gets reinvested and can be claimed under 80C each year until maturity.,edge_case,hard
+What percentage of basic salary is contributed to EPF?,The document mentions EPF contributions qualify under 80C but does not specify the EPF contribution percentage.,out_of_scope,medium
+I am paying rent in two different cities. Can I claim HRA for both?,HRA exemption can only be claimed for one rented accommodation where the employee actually resides. You cannot claim HRA for two different rented properties simultaneously.,edge_case,hard
+My total advance tax liability is Rs 9000. Do I need to pay advance tax?,No advance tax is required only when the estimated tax liability exceeds Rs 10000. Since your liability is Rs 9000 which is below the threshold you are not required to pay advance tax.,reasoning,easy
+Can I claim 80C deduction for life insurance premium of my married daughter?,The document mentions life insurance premiums qualify under 80C but does not specify whether premiums for married children are eligible.,out_of_scope,medium
+I work in Chennai and pay rent. Is it metro or non-metro for HRA?,Chennai is one of the four metro cities for HRA purposes along with Delhi Mumbai and Kolkata. The 50% rate of basic plus DA applies for your HRA calculation.,edge_case,easy
+What is the maximum 80D deduction if I am 55 and my parents are both 63?,You (below 60) can claim Rs 25000 for self and family. Your parents are senior citizens so you can claim Rs 50000 for parents. Total maximum is Rs 75000.,reasoning,medium
+I am salaried and also have freelance income of Rs 40000. A client paid me without deducting TDS. Do I need to pay tax on it?,Yes freelance income is taxable. If the client paid less than Rs 30000 aggregate they were not required to deduct TDS under 194J. You must still include this income in your ITR and pay applicable tax.,reasoning,medium
+Can I claim deduction for donation to a political party?,The document does not contain information about deductions for political party donations. It covers Sections 80C 80D HRA and TDS only.,out_of_scope,easy
+I bought a house and paid Rs 80000 stamp duty. Can I claim it under 80C?,Yes stamp duty and registration charges paid for purchase of a house property are deductible under Section 80C in the year they are paid within the Rs 1.5 lakh overall limit.,factual,medium

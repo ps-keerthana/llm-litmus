@@ -1,0 +1,17 @@
+TDS on Salary - Section 192
+Every employer is required to deduct TDS (Tax Deducted at Source) from salary payments under Section 192. TDS is calculated based on the estimated annual income of the employee after considering declared deductions (80C, 80D, HRA, etc.) and the applicable tax slab. The employer issues Form 16 to the employee after the end of the financial year, which contains details of salary paid, TDS deducted, and deductions claimed. Form 16 has two parts: Part A contains TDS certificate details, and Part B contains the computation of income.
+
+TDS on Fixed Deposit Interest - Section 194A
+Banks deduct TDS at 10% on fixed deposit interest if the total interest earned from all FDs with that bank exceeds Rs 40,000 in a financial year. For senior citizens (60+), the threshold is Rs 50,000. If the depositor does not provide PAN, TDS is deducted at 20% instead of 10%. To avoid TDS when total income is below the taxable limit, the depositor can submit Form 15G (for individuals below 60) or Form 15H (for senior citizens). TDS on FD interest is deducted at the time of credit or payment, whichever is earlier.
+
+TDS on Rent - Section 194I
+TDS on rent is applicable when total rent paid or payable during the financial year exceeds Rs 2.4 lakh. The TDS rate is 2% for rent of plant, machinery, or equipment, and 10% for rent of land, building, furniture, or fittings. If the landlord does not provide PAN, TDS is deducted at 20%. For individual or HUF tenants not subject to tax audit, Section 194IB applies with TDS at 5% on monthly rent exceeding Rs 50,000, deducted in the last month of the tenancy or the last month of the financial year.
+
+TDS on Professional Fees - Section 194J
+TDS at 10% is deducted on payments for professional or technical services if the aggregate amount paid during the year exceeds Rs 30,000. For fees for technical services (other than professional services), the TDS rate is 2%. Professionals include lawyers, doctors, architects, accountants, engineers, interior decorators, and others notified by the board.
+
+Form 26AS and Annual Information Statement
+Form 26AS is an annual consolidated tax statement that shows all TDS deducted against the taxpayer's PAN during the financial year. It includes TDS from salary, bank interest, rent, professional fees, sale of property, and other sources. The Annual Information Statement (AIS) provides a comprehensive view of all financial transactions reported by various entities. Taxpayers should verify their Form 26AS and AIS before filing income tax returns to ensure all TDS credits are correctly reflected.
+
+TDS Refund Process
+If TDS deducted exceeds the actual tax liability (for example, when total income is below the taxable limit), the excess TDS can be claimed as a refund by filing an income tax return. The refund is processed by the Centralized Processing Centre (CPC) in Bengaluru. Interest at 0.5% per month is paid on the refund amount from April of the assessment year to the date of refund. Typically, refunds are processed within 4 to 6 weeks of filing the return electronically. The refund is credited directly to the bank account linked to the PAN.

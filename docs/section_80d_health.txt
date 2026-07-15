@@ -1,0 +1,17 @@
+Section 80D - Health Insurance Premium Deduction
+Section 80D allows deduction for health insurance premiums paid during the financial year. This deduction is available only under the old tax regime. The deduction limits are as follows: For self, spouse, and dependent children, the maximum deduction is Rs 25,000 per year. For parents, an additional deduction of up to Rs 25,000 is available. If the insured person (self or parent) is a senior citizen aged 60 or above, the limit increases to Rs 50,000 instead of Rs 25,000.
+
+Maximum Deduction Scenarios under 80D
+If both the taxpayer and parents are below 60 years: maximum deduction is Rs 25,000 + Rs 25,000 = Rs 50,000. If the taxpayer is below 60 but parents are senior citizens (60+): maximum deduction is Rs 25,000 + Rs 50,000 = Rs 75,000. If both the taxpayer and parents are senior citizens: maximum deduction is Rs 50,000 + Rs 50,000 = Rs 1,00,000. These are the maximum possible deductions under Section 80D.
+
+Preventive Health Checkup
+Within the overall limits of Section 80D, a deduction of up to Rs 5,000 per year is allowed for preventive health checkup expenses. This Rs 5,000 is NOT in addition to the Rs 25,000 or Rs 50,000 limits — it is included within those limits. Payment for preventive health checkup can be made in cash, unlike the premium which must be paid through non-cash modes (cheque, bank transfer, digital payment).
+
+Medical Expenditure for Senior Citizens without Insurance
+If a senior citizen (60+ years) does not have any health insurance policy, they can still claim a deduction of up to Rs 50,000 under 80D for medical expenses actually incurred. This is specifically for uninsured senior citizens. This deduction is available for expenses on the senior citizen's own health or for senior citizen parents.
+
+Section 80DD - Disabled Dependent
+Section 80DD provides a flat deduction for maintenance and medical treatment of a disabled dependent (spouse, children, parents, siblings). The deduction is Rs 75,000 for disability of 40% or more, and Rs 1,25,000 for severe disability of 80% or more. This deduction is available regardless of the actual amount spent. A certificate from a prescribed medical authority is required.
+
+Section 80DDB - Specified Diseases
+Section 80DDB allows deduction for medical treatment of specified diseases such as cancer, AIDS, chronic renal failure, hemophilia, and thalassemia. The maximum deduction for individuals below 60 years is Rs 40,000. For senior citizens (60+), the maximum deduction is Rs 1,00,000. A prescription from a specialist doctor is required as proof.

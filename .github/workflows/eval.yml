@@ -33,7 +33,7 @@ jobs:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: python evaluate_dataset.py
 
-      - name: Check pass rate threshold
+      - name: Run CI quality gate
         run: python ci_check.py
 
       - name: Upload eval results
@@ -42,3 +42,45 @@ jobs:
         with:
           name: eval-results
           path: eval_results/
+
+      # Auto-commit metrics_history.json back to the repo (push only)
+      - name: Commit metrics history
+        if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add metrics_history.json
+          git diff --cached --quiet || git commit -m "ci: update metrics history [skip ci]"
+          git push
+
+      # Post eval summary as PR comment
+      - name: Post eval summary on PR
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v7
+        with:
+          script: |
+            const fs = require('fs');
+            const glob = require('glob');
+            const files = glob.sync('eval_results/run_*.json').sort();
+            if (files.length === 0) return;
+            const data = JSON.parse(fs.readFileSync(files[files.length - 1], 'utf8'));
+            const status = data.pass_rate >= 70 ? '✅' : '❌';
+            const body = `## ${status} LLM Eval Results
+
+            | Metric | Value |
+            |--------|-------|
+            | Pass Rate | ${data.pass_rate}% |
+            | Avg Faithfulness | ${data.avg_faithfulness} |
+            | Avg Semantic Similarity | ${data.avg_semantic_similarity} |
+            | Hallucination Rate | ${data.hallucination_rate_avg} |
+            | p95 Latency | ${data.p95_latency_sec}s |
+            | Total Cost | $${data.total_cost_usd} |
+            | Questions | ${data.passed}/${data.total_questions} passed |
+            | Commit | \`${data.commit_sha}\` |`;
+
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: body
+            });

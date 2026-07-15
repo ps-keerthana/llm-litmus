@@ -1,4 +1,26 @@
+# Virtual environment
 venv/
+
+# Environment variables (API keys)
 .env
+
+# Python cache
 __pycache__/
 *.pyc
+*.pyo
+
+# Individual eval run results (too large for git)
+# Only metrics_history.json is tracked
+eval_results/
+
+# IDE / editor
+.vscode/
+.idea/
+*.swp
+
+# Agent configs
+.agents/
+
+# OS files
+.DS_Store
+Thumbs.db

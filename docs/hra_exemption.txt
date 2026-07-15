@@ -1,0 +1,17 @@
+HRA Exemption - House Rent Allowance
+HRA (House Rent Allowance) exemption is available under Section 10(13A) of the Income Tax Act only under the old tax regime. HRA exemption is NOT available under the new tax regime. To claim HRA, the employee must be receiving HRA as part of their salary, must be paying rent for the house they live in, and must not own the house in which they reside.
+
+HRA Exemption Calculation
+The HRA exemption is the minimum of the following three amounts: 1) Actual HRA received from the employer. 2) 50% of basic salary plus dearness allowance (DA) if living in a metro city (Delhi, Mumbai, Chennai, Kolkata), or 40% if living in a non-metro city. 3) Actual rent paid minus 10% of basic salary plus DA. The lowest of these three figures is the exempt amount. The remaining HRA (if any) is added to taxable income.
+
+Rent Receipt and Documentation Requirements
+If rent paid exceeds Rs 1 lakh per year, the tenant must provide the landlord's PAN to the employer. If the landlord does not have a PAN, a declaration from the landlord along with their name and address details is required. Rent receipts must contain: the landlord's name, address, the period of rent, the amount paid, and a revenue stamp for cash payments. Rent agreement (leave and license agreement) is recommended as additional proof.
+
+HRA When Living with Parents
+An employee can claim HRA exemption by paying rent to their parents. The parent must include this rental income in their own income tax return. A rental agreement between the employee and parent is recommended. This is a legitimate tax planning strategy as long as the rent is genuinely paid (bank transfers are preferred as proof). However, paying rent to a spouse is NOT allowed for HRA exemption as per income tax rules.
+
+Section 80GG - Rent Deduction Without HRA
+If an employee does not receive HRA as part of their salary, they can claim a deduction under Section 80GG for rent paid. The deduction under 80GG is the minimum of: 1) Rs 5,000 per month. 2) 25% of total income. 3) Actual rent paid minus 10% of total income. The employee, spouse, or minor child must not own a residential property in the city where they work. Form 10BA must be filed to claim this deduction. Section 80GG is available only under the old tax regime.
+
+HRA for Work From Home Scenarios
+If an employee works from home and pays rent for their residence, they can still claim HRA exemption as long as they are receiving HRA as part of their salary and are not living in a self-owned property. The work-from-home arrangement does not affect HRA eligibility. The location of the rented property determines whether the 50% (metro) or 40% (non-metro) rate applies.

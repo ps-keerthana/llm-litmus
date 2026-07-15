@@ -1,0 +1,34 @@
+[
+  {
+    "timestamp": "20260715_110000",
+    "commit_sha": "a1b2c3d",
+    "pass_rate": 90.2,
+    "avg_faithfulness": 0.99,
+    "avg_semantic_similarity": 0.707,
+    "avg_relevancy": 0.874,
+    "hallucination_rate_avg": 0.01,
+    "p50_latency_sec": 1.43,
+    "p95_latency_sec": 2.41,
+    "total_cost_usd": 0.002934,
+    "avg_cost_usd": 1.4e-05,
+    "total_questions": 204,
+    "passed": 184,
+    "failed": 20
+  },
+  {
+    "timestamp": "20260715_120000",
+    "commit_sha": "e5f6g7h",
+    "pass_rate": 96.6,
+    "avg_faithfulness": 0.995,
+    "avg_semantic_similarity": 0.72,
+    "avg_relevancy": 0.898,
+    "hallucination_rate_avg": 0.005,
+    "p50_latency_sec": 1.28,
+    "p95_latency_sec": 2.11,
+    "total_cost_usd": 0.002787,
+    "avg_cost_usd": 1.4e-05,
+    "total_questions": 204,
+    "passed": 197,
+    "failed": 7
+  }
+]

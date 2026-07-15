@@ -1,0 +1,17 @@
+Section 80C Deductions
+Section 80C of the Income Tax Act allows a maximum deduction of Rs 1.5 lakh per financial year from gross total income. This deduction is available only under the old tax regime. The following investments and expenses qualify under 80C: Public Provident Fund (PPF) contributions, Employee Provident Fund (EPF) contributions, Equity Linked Savings Scheme (ELSS) mutual funds with a 3-year lock-in, National Savings Certificate (NSC), 5-year fixed deposits with banks or post office, life insurance premium payments (up to 10% of sum assured for policies issued after April 2012), tuition fees paid for up to 2 children for full-time education in India, and home loan principal repayment.
+
+Section 80CCC - Pension Fund Contribution
+Contributions to certain pension funds under Section 80CCC are also deductible. However, the combined deduction under Section 80C, 80CCC, and 80CCD(1) cannot exceed Rs 1.5 lakh. Any amount received from the pension fund on surrender or maturity is taxable in the year of receipt.
+
+Section 80CCD - National Pension System (NPS)
+Employee contributions to NPS are deductible under Section 80CCD(1) within the overall 80C limit of Rs 1.5 lakh. An additional deduction of Rs 50,000 is available under Section 80CCD(1B) specifically for NPS contributions, over and above the Rs 1.5 lakh limit. This makes the total possible deduction through 80C and 80CCD(1B) combined equal to Rs 2 lakh. Employer contributions to NPS are deductible under Section 80CCD(2) up to 10% of salary (basic + DA) for private sector employees and up to 14% for government employees. The 80CCD(2) deduction has no upper monetary limit and is available under both old and new tax regimes.
+
+ELSS vs PPF Comparison
+ELSS (Equity Linked Savings Scheme) has a lock-in period of 3 years, which is the shortest among all 80C investments. PPF has a lock-in of 15 years but offers guaranteed returns. ELSS returns are market-linked and not guaranteed. ELSS long-term capital gains above Rs 1 lakh in a year are taxed at 10%. PPF interest and maturity amount are completely tax-free (EEE status). The current PPF interest rate is set by the government quarterly and is around 7.1% per annum.
+
+Home Loan Principal Repayment under 80C
+The principal component of home loan EMIs qualifies for deduction under Section 80C up to the Rs 1.5 lakh limit. Additionally, stamp duty and registration charges paid for the purchase of a house property are also deductible under 80C in the year they are paid. The property should not be sold within 5 years of possession; otherwise, the deduction claimed will be reversed and added back to income in the year of sale.
+
+Tuition Fee Deduction under 80C
+Tuition fees paid to any university, college, school, or educational institution in India for full-time education of up to 2 children qualify for deduction under 80C. Only tuition fees are allowed — development fees, transport fees, hostel fees, donations, and private tuitions do not qualify. Both parents can claim the deduction for 2 children each, effectively covering 4 children per family. The tuition fee deduction is available for the assessee's children only, not for the assessee's own education.

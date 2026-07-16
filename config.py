@@ -24,8 +24,9 @@ DEFAULT_TOP_K = 3
 
 # ── Version Tracking ──────────────────────────────────────
 VERSION_DATASET = "1.0.0"
-VERSION_PROMPT = "1.1.0"      # Optimized LLM-judge prompts & refusal checks
+VERSION_PROMPT = "1.2.0"      # Hardened deductive reasoning prompt
 VERSION_RETRIEVER = "1.0.0"   # ChromaDB vector store
+
 VERSION_EMBEDDING = EMBEDDING_MODEL_NAME
 VERSION_LLM = MODEL_NAME
 
@@ -35,6 +36,13 @@ THRESHOLD_HALLUCINATION = 0.05    # Maximum average hallucination rate (5%)
 THRESHOLD_P95_LATENCY = 3.5       # Maximum p95 latency (seconds)
 THRESHOLD_RETRIEVAL_HIT_RATE = 80.0  # Minimum retrieval hit rate (%)
 
+# ── Failure Attribution Thresholds ───────────────────────────
+ATTRIBUTION_RECALL_MIN = 0.50          # Recall below this indicates retrieval issue/KB gap
+ATTRIBUTION_SIM_MIN = 0.50             # Semantic similarity below this indicates mismatch
+ATTRIBUTION_JUDGE_CORRECTNESS_MIN = 0.75  # LLM judge correctness threshold
+ATTRIBUTION_FAITHFULNESS_MIN = 0.70    # LLM judge faithfulness threshold
+ATTRIBUTION_HALLUCINATION_MAX = 0.10   # Hallucination threshold
+
 # ── Regression Detection Limits ───────────────────────────
 # If the metric decays by more than this limit, the build is flagged as regressed.
 REGRESSION_LIMIT_PASS_RATE = 5.0            # Max drop in pass rate (percentage points)
@@ -43,3 +51,4 @@ REGRESSION_LIMIT_P95_LATENCY_PERCENT = 15.0  # Max slowdown in p95 latency (%)
 REGRESSION_LIMIT_P95_LATENCY_ABS = 0.3       # Max absolute slowdown in p95 latency (sec)
 REGRESSION_LIMIT_COST_PERCENT = 20.0        # Max increase in average query cost (%)
 REGRESSION_LIMIT_RETRIEVAL_HIT_RATE = 5.0   # Max drop in retrieval hit rate (%)
+

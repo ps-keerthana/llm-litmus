@@ -266,9 +266,6 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
 
         results.append(record)
 
-        time.sleep(1.8)  # Rate limit safety sleep
-
-
     # ── Aggregate Calculations ─────────────────────────────
     latencies = [r["latency_sec"] for r in results]
     p50 = round(float(np.percentile(latencies, 50)), 2) if latencies else 0.0

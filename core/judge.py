@@ -73,10 +73,6 @@ Return ONLY a valid JSON object. Do not include markdown formatting or wrapping.
         )
 
     try:
-        # Respect API Rate Limits: Add safety sleep when making back-to-back calls
-        import time
-        time.sleep(2.0)
-
         response = call_groq_with_retry(
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},

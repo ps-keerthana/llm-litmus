@@ -1,0 +1,59 @@
+name: Nightly LLM Evaluation Pipeline
+
+on:
+  schedule:
+    - cron: '0 0 * * *'  # Every night at midnight UTC
+  workflow_dispatch:      # Manual trigger from GHA UI
+
+concurrency:
+  group: eval-full-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  evaluate-full:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run Full Evaluation (All golden questions, LLM judge enabled)
+        env:
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+        run: |
+          # Full mode evaluation: runs LLM grader & absolute threshold checks
+          python evaluate.py
+
+      - name: Verify Quality Gate (Full Mode & Regressions)
+        run: python ci_gate.py --mode full
+
+      - name: Publish Actions Step Summary
+        if: always()
+        run: |
+          if [ -f eval_summary.md ]; then
+            cat eval_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload Detailed Run Reports
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: eval-results-full-${{ github.run_id }}
+          path: eval_results/
+          retention-days: 30

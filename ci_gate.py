@@ -93,37 +93,79 @@ def write_markdown_summary(latest: Dict[str, Any], failures: List[str]) -> None:
 
 
 def main() -> None:
+    import argparse
+    parser = argparse.ArgumentParser(description="CI Quality Gate & Regression Audit.")
+    parser.add_argument(
+        "--mode",
+        choices=["smoke", "full"],
+        default="full",
+        help="Gating execution mode (smoke = pipeline health only, full = complete quality gates & regressions)"
+    )
+    args = parser.parse_args()
+
     try:
         latest, baseline = load_latest_runs()
     except Exception as exc:
         logger.error(f"Failed to load evaluation runs: {exc}")
         sys.exit(1)
 
-    # Perform quality threshold and regression checks
-    failures = check_regressions(latest, baseline)
+    failures = []
+    
+    if args.mode == "smoke":
+        logger.info("Executing CI Quality Gate in SMOKE mode (Pipeline Health Audit)...")
+        # 1. Check retrieval hit rate >= 80%
+        latest_hit = latest.get("avg_retrieval_hit_rate", 1.0) * 100.0
+        if latest_hit < 80.0:
+            failures.append(f"Retrieval hit rate {latest_hit:.1f}% falls below smoke threshold 80.0%")
+            
+        # 2. Check p95 latency <= 4.0s
+        latest_p95 = latest.get("p95_latency_sec", 0.0)
+        if latest_p95 > 4.0:
+            failures.append(f"p95 latency {latest_p95:.2f}s exceeds smoke threshold 4.0s")
+            
+        # 3. Check minimum questions processed
+        results = latest.get("results", [])
+        if len(results) < 10:
+            failures.append(f"Total questions evaluated ({len(results)}) is less than smoke threshold of 10")
+            
+        # 4. Check for API/Connection errors or 429 rate limit errors
+        for r in results:
+            ans = r.get("answer", "")
+            if "LLM generation failed" in ans or "Error:" in ans:
+                failures.append(f"API generation error detected in query {r.get('unique_id')}: {ans}")
+                break
+    else:
+        logger.info("Executing CI Quality Gate in FULL mode (Quality & Regression Audit)...")
+        failures = check_regressions(latest, baseline)
 
     logger.info("=" * 60)
-    logger.info("CI QUALITY GATES & REGRESSION AUDIT")
+    logger.info(f"CI QUALITY GATES & REGRESSION AUDIT ({args.mode.upper()} MODE)")
     logger.info("=" * 60)
-    logger.info(f"Pass Rate:      {latest.get('pass_rate', 0.0)}% (threshold: >= 70.0%)")
-    logger.info(f"Hallucination:  {latest.get('hallucination_rate_avg', 0.0):.3f} (threshold: <= 0.05)")
-    logger.info(f"p95 Latency:    {latest.get('p95_latency_sec', 0.0):.2f}s (threshold: <= 3.5s)")
-    logger.info(f"Hit Rate:       {round(latest.get('avg_retrieval_hit_rate', 1.0) * 100.0, 1)}% (threshold: >= 80.0%)")
+    if args.mode == "smoke":
+        logger.info(f"Hit Rate:       {round(latest.get('avg_retrieval_hit_rate', 1.0) * 100.0, 1)}% (threshold: >= 80.0%)")
+        logger.info(f"p95 Latency:    {latest.get('p95_latency_sec', 0.0):.2f}s (threshold: <= 4.0s)")
+        logger.info(f"Total Queries:  {len(latest.get('results', []))} (threshold: >= 10)")
+    else:
+        logger.info(f"Pass Rate:      {latest.get('pass_rate', 0.0)}% (threshold: >= 70.0%)")
+        logger.info(f"Hallucination:  {latest.get('hallucination_rate_avg', 0.0):.3f} (threshold: <= 0.05)")
+        logger.info(f"p95 Latency:    {latest.get('p95_latency_sec', 0.0):.2f}s (threshold: <= 3.5s)")
+        logger.info(f"Hit Rate:       {round(latest.get('avg_retrieval_hit_rate', 1.0) * 100.0, 1)}% (threshold: >= 80.0%)")
     logger.info("-" * 60)
 
     # Generate the PR-comment ready markdown summary file
     write_markdown_summary(latest, failures)
 
     if failures:
-        logger.error("[GATE FAILED] Regression check or absolute quality gate failed:")
+        logger.error(f"[GATE FAILED] CI {args.mode} gate or regression checks failed:")
         for fail in failures:
             logger.error(f"  - {fail}")
         logger.info("=" * 60)
         sys.exit(1)
     else:
-        logger.info("[GATE PASSED] All threshold and regression boundaries satisfied.")
+        logger.info(f"[GATE PASSED] All {args.mode} health and quality gates satisfied.")
         logger.info("=" * 60)
         sys.exit(0)
+
 
 
 if __name__ == "__main__":

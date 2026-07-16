@@ -24,3 +24,6 @@ eval_results/
 # OS files
 .DS_Store
 Thumbs.db
+
+# Evaluation cache
+.eval_cache.json

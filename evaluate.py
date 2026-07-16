@@ -6,6 +6,8 @@ and invoking JSON LLM-as-a-judge grates. Logs reproducible outputs.
 """
 
 import os
+from dotenv import load_dotenv
+load_dotenv()
 import csv
 import json
 import time
@@ -18,7 +20,7 @@ import numpy as np
 from config import (
     DATASET_PATH, EVAL_RESULTS_DIR,
     VERSION_DATASET, VERSION_PROMPT, VERSION_RETRIEVER, VERSION_EMBEDDING, VERSION_LLM,
-    DEFAULT_TEMPERATURE, DEFAULT_TOP_K
+    DEFAULT_TEMPERATURE, DEFAULT_TOP_K, THRESHOLD_P95_LATENCY
 )
 from core.retrieval import load_docs, build_vector_store, retrieve, evaluate_retrieval
 from core.generator import generate_answer
@@ -126,14 +128,14 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         elapsed = time.time() - gen_start
 
         # Enforce minimum inter-request interval to stay within RPM limits.
-        # Subtract any rate-limit sleep already consumed (LAST_API_SLEEP_TIME)
-        # so we don't double-wait when a retry already paused long enough.
+        # Skip this delay if the call was loaded from cache (no API call made).
         import core.generator as _gen_mod
-        already_waited = _gen_mod.LAST_API_SLEEP_TIME
-        effective_elapsed = elapsed - already_waited
-        remaining_wait = max(0.0, MIN_REQUEST_INTERVAL_SEC - effective_elapsed)
-        if remaining_wait > 0 and idx < len(questions) - 1:  # no need to wait after last query
-            time.sleep(remaining_wait)
+        if not _gen_mod.WAS_LAST_CALL_CACHED:
+            already_waited = _gen_mod.LAST_API_SLEEP_TIME
+            effective_elapsed = elapsed - already_waited
+            remaining_wait = max(0.0, MIN_REQUEST_INTERVAL_SEC - effective_elapsed)
+            if remaining_wait > 0 and idx < len(questions) - 1:  # no need to wait after last query
+                time.sleep(remaining_wait)
         
         # Subtract any rate-limiting sleep duration to get the true execution latency
         import core.generator

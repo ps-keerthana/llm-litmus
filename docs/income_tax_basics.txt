@@ -18,3 +18,7 @@ Any person whose estimated tax liability for the year exceeds Rs 10,000 must pay
 
 Standard Deduction
 A standard deduction of Rs 50,000 is available to all salaried employees and pensioners under both the old and new tax regimes. This was increased from Rs 40,000 to Rs 50,000 from FY 2019-20 onwards. The standard deduction is available under the new regime from FY 2023-24 onwards. No bills or proof of expenses are required to claim the standard deduction. It is automatically applied to salary income.
+
+Tax Regime Switching Rules
+Salaried individuals can switch between the old and new tax regimes every year by making the choice at the time of filing their income tax return. However, individuals with income from business or profession who opt out of the new tax regime can switch back to it only once and cannot opt out of the new regime again. The choice of regime must be made before the due date of filing the return.
+

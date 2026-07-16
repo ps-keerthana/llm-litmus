@@ -1,104 +1,130 @@
 """
 Core Failure Attribution Module (core/attributor.py)
 Deterministically categorizes failed query results and diagnoses RAG quality boundaries.
+Integrates a counterfactual diagnoser to isolate retrieval vs. generation failures.
 """
 
 import os
-from typing import Dict, Any, Tuple
+from typing import Dict, Any, Tuple, List
 import config
+from core.utils import logger
 
-def attribute_failure(result: Dict[str, Any]) -> Tuple[str, str]:
-    """
-    Deterministically attributes a failed query to a root cause category.
-    Returns a tuple: (failure_category, attribution_reason)
-    
-    Categories:
-    - "Knowledge Base Gap": Expected source document is completely missing from corpus folder.
-    - "Retrieval Failure": Expected source exists, but retriever failed to fetch/rank it.
-    - "LLM Hallucination": LLM generated facts not supported by retrieved context.
-    - "Evaluation False Negative": LLM judge deemed answer correct, but semantic similarity model flagged it.
-    - "LLM Generation Failure": Context was successfully retrieved and sufficient, but LLM over-refused or answered incorrectly.
-    - "Needs Manual Review": Any failure that doesn't trigger clear heuristic gates.
-    """
-    # 1. Fetch expected sources
-    expected_sources_str = result.get("expected_sources", "")
+
+def load_ground_truth_context(expected_sources_str: str) -> List[str]:
+    """Loads the raw content of the expected source files from the docs/ directory."""
     expected_sources = []
     if expected_sources_str and expected_sources_str != "N/A":
         expected_sources = [s.strip() for s in expected_sources_str.split(";")]
         
-    # Check if any expected source file is actually missing from the docs directory
+    chunks = []
+    for src in expected_sources:
+        doc_path = os.path.join(config.DOCS_FOLDER, src)
+        if os.path.exists(doc_path):
+            try:
+                with open(doc_path, "r", encoding="utf-8") as f:
+                    chunks.append(f.read())
+            except Exception as e:
+                logger.warning(f"[Diagnoser] Failed to read doc '{src}': {e}")
+    return chunks
+
+
+def run_counterfactual_diagnosis(result: Dict[str, Any]) -> Tuple[str, str, str, float]:
+    """
+    Executes a counterfactual sandbox run for a failed query:
+    1. Loads raw ground-truth contexts directly from docs/.
+    2. Swaps retrieved contexts with the ground-truth contexts.
+    3. Re-runs answer generation.
+    4. Computes semantic similarity of the counterfactual answer against the ground truth.
+    
+    If the counterfactual answer passes, the issue is isolated to the Retriever (Retrieval Failure).
+    If it still fails, the issue is isolated to the Generator (Generation Failure).
+    
+    Returns:
+        (failure_category, diagnosis_reason, counterfactual_answer, counterfactual_similarity)
+    """
+    question = result.get("question", "")
+    ground_truth = result.get("ground_truth", "")
+    expected_sources_str = result.get("expected_sources", "")
+    
+    # 1. Check for Knowledge Base Gap
+    expected_sources = []
+    if expected_sources_str and expected_sources_str != "N/A":
+        expected_sources = [s.strip() for s in expected_sources_str.split(";")]
+        
     missing_docs = []
     for src in expected_sources:
         doc_path = os.path.join(config.DOCS_FOLDER, src)
         if not os.path.exists(doc_path):
             missing_docs.append(src)
             
-    is_missing_from_corpus = len(missing_docs) > 0
-
-    # 2. Extract metrics
-    hit_rate = result.get("hit_rate", 1.0)
-    context_recall = result.get("context_recall", 1.0)
-    semantic_sim = result.get("semantic_similarity", 0.0)
-    
-    # LLM judge metrics (might be "Not Evaluated" in smoke/no-judge mode)
-    judge_correctness = result.get("correctness", 0.0)
-    judge_faithfulness = result.get("faithfulness", 1.0)
-    judge_hallucination = result.get("hallucination_rate", 0.0)
-    
-    # Convert judge metrics if they are strings (e.g. "Not Evaluated")
-    is_judge_evaluated = True
-    if isinstance(judge_correctness, str) or isinstance(judge_faithfulness, str):
-        is_judge_evaluated = False
-        judge_correctness = 0.0
-        judge_faithfulness = 1.0
-        judge_hallucination = 0.0
-
-    # 3. Decision tree for attribution
-    if is_missing_from_corpus:
+    if missing_docs:
         category = "Knowledge Base Gap"
-        reason = f"Expected document(s) {missing_docs} are missing from corpus directory '{config.DOCS_FOLDER}'."
-        return category, reason
+        reason = f"Expected document(s) {missing_docs} are missing from docs directory '{config.DOCS_FOLDER}'."
+        return category, reason, "", 0.0
 
-    if hit_rate == 0.0 or context_recall < config.ATTRIBUTION_RECALL_MIN:
-        category = "Retrieval Failure"
-        reason = (
-            f"Retrieval quality is low (hit_rate={hit_rate}, context_recall={context_recall:.2f} < "
-            f"threshold {config.ATTRIBUTION_RECALL_MIN}). Expected source exists in corpus but was not ranked in top-k."
+    # 2. Load ground truth context chunks
+    gt_chunks = load_ground_truth_context(expected_sources_str)
+    if not gt_chunks:
+        category = "Knowledge Base Gap"
+        reason = "No valid expected source documents could be loaded from the docs directory."
+        return category, reason, "", 0.0
+
+    # 3. Run counterfactual generation
+    from core.generator import generate_answer
+    from core.metrics import compute_semantic_similarity
+    
+    logger.info(f"[Diagnoser] Running counterfactual sandbox generation for query: '{question[:40]}...'")
+    try:
+        cf_answer, _, _ = generate_answer(
+            question=question,
+            context_chunks=gt_chunks,
+            temperature=0.0
         )
-        return category, reason
+        cf_sim = compute_semantic_similarity(cf_answer, ground_truth)
+        logger.info(f"[Diagnoser] Counterfactual similarity: {cf_sim:.3f}")
+        
+        # 4. Classify based on counterfactual similarity threshold.
+        # Deliberately higher than the general MIN_SEMANTIC_SIM (0.65):
+        # to call it a "Retrieval Failure" we need strong evidence that the
+        # generator is definitively correct when given GT context.
+        CF_ISOLATION_THRESHOLD = 0.75
+        if cf_sim >= CF_ISOLATION_THRESHOLD:
+            category = "Retrieval Failure"
+            reason = (
+                f"Isolator PASS: LLM generated a correct answer (sim={cf_sim:.3f}) when provided with raw ground-truth contexts. "
+                "The generator prompt and model are correct; context was missed or ranked poorly by retriever."
+            )
+        else:
+            category = "LLM Generation Failure"
+            reason = (
+                f"Isolator FAIL: LLM still generated an incorrect answer (sim={cf_sim:.3f} < {CF_ISOLATION_THRESHOLD}) "
+                "even when provided with direct ground-truth context. The generator prompt or model reasoning capabilities are insufficient."
+            )
+        return category, reason, cf_answer, cf_sim
 
-    if is_judge_evaluated and (judge_faithfulness < config.ATTRIBUTION_FAITHFULNESS_MIN or judge_hallucination > config.ATTRIBUTION_HALLUCINATION_MAX):
-        category = "LLM Hallucination"
-        reason = (
-            f"LLM hallucinated unsupported claims (faithfulness={judge_faithfulness:.2f} < "
-            f"{config.ATTRIBUTION_FAITHFULNESS_MIN} or hallucination={judge_hallucination:.2f} > "
-            f"{config.ATTRIBUTION_HALLUCINATION_MAX})."
-        )
-        return category, reason
+    except Exception as e:
+        logger.error(f"[Diagnoser Error] Counterfactual sandbox generation failed: {e}")
+        category = "Needs Manual Review"
+        reason = f"Counterfactual execution failed with exception: {e}"
+        return category, reason, "", 0.0
 
-    if is_judge_evaluated and (judge_correctness >= config.ATTRIBUTION_JUDGE_CORRECTNESS_MIN and semantic_sim < config.ATTRIBUTION_SIM_MIN):
-        category = "Evaluation False Negative"
-        reason = (
-            f"Semantic similarity is low ({semantic_sim:.3f} < {config.ATTRIBUTION_SIM_MIN}) but LLM judge "
-            f"confirmed answer is correct ({judge_correctness:.2f}). Typically caused by length differences or structural mismatch."
-        )
-        return category, reason
 
-    if is_judge_evaluated and (judge_correctness < config.ATTRIBUTION_JUDGE_CORRECTNESS_MIN and context_recall >= config.ATTRIBUTION_RECALL_MIN):
-        category = "LLM Generation Failure"
-        reason = (
-            f"Retrieved context is sufficient (recall={context_recall:.2f}), but LLM failed to answer correctly "
-            f"(correctness={judge_correctness:.2f} < {config.ATTRIBUTION_JUDGE_CORRECTNESS_MIN}). Over-refusal or inference gap."
-        )
-        return category, reason
+def attribute_failure(result: Dict[str, Any]) -> Tuple[str, str]:
+    """
+    Deterministically attributes a failed query to a root cause category.
+    Returns a tuple: (failure_category, attribution_reason)
+    
+    If the status is 'FAIL', it executes the counterfactual diagnoser sandbox to isolate
+    the root cause between Retrieval, Generation, and Knowledge Base gaps.
+    """
+    status = result.get("status", "PASS")
+    if status == "PASS":
+        return "N/A", "Query passed all quality checks."
 
-    # Fallback gate
-    category = "Needs Manual Review"
-    reason = (
-        f"Query failed absolute thresholds. Metrics: sim={semantic_sim:.3f}, correctness={judge_correctness}, "
-        f"recall={context_recall:.2f}, hit_rate={hit_rate}."
-    )
+    # Execute counterfactual diagnoser sandbox for failed queries
+    category, reason, _, _ = run_counterfactual_diagnosis(result)
     return category, reason
+
 
 def build_retrieval_diagnosis(result: Dict[str, Any]) -> Dict[str, bool]:
     """
@@ -115,7 +141,6 @@ def build_retrieval_diagnosis(result: Dict[str, Any]) -> Dict[str, bool]:
     hallucination = result.get("hallucination_rate", 0.0)
     answer = result.get("answer", "").lower()
     
-    # Check if they are strings (e.g. "Not Evaluated")
     if isinstance(faithfulness, str):
         faithfulness = 1.0
     if isinstance(hallucination, str):

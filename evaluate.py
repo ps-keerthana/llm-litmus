@@ -163,42 +163,17 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
             if any(kw in answer_lower for kw in refusal_keywords):
                 is_refusal = True
 
-        bypass_judge = False
-        if no_judge:
-            # CI mode: skip all LLM judge API calls.
-            # Use semantic similarity as a proxy for correctness.
-            correctness_proxy = min(1.0, semantic_sim / 0.75)  # scaled to [0, 1]
-            judge_metrics = {
-                "correctness": round(correctness_proxy, 3),
-                "faithfulness": "Not Evaluated",
-                "completeness": "Not Evaluated",
-                "hallucination": "Not Evaluated",
-                "confidence": round(semantic_sim, 3),
-                "reasoning": f"Judge skipped (--no-judge). Proxy correctness from sim={semantic_sim}."
-            }
-            judge_p, judge_c = 0, 0
-            bypass_judge = True
-        elif is_refusal:
-            judge_metrics = {
-                "correctness": 1.0, "faithfulness": 1.0, "completeness": 1.0,
-                "hallucination": 0.0, "confidence": 1.0,
-                "reasoning": "Bypassed judge: Correct refusal for out-of-scope question."
-            }
-            judge_p, judge_c = 0, 0
-            bypass_judge = True
-        elif semantic_sim >= BYPASS_SIM_THRESHOLD:
-            judge_metrics = {
-                "correctness": 1.0, "faithfulness": 1.0, "completeness": 1.0,
-                "hallucination": 0.0, "confidence": 1.0,
-                "reasoning": f"Bypassed judge: High semantic similarity ({semantic_sim}) to ground truth."
-            }
-            judge_p, judge_c = 0, 0
-            bypass_judge = True
-
-        if not bypass_judge:
-            judge_metrics, judge_p, judge_c = llm_judge_evaluate(
-                question, answer, ground_truth, retrieved_chunks
-            )
+        # Centralized Oracle Routing
+        from core.judge import evaluate_with_oracle_routing
+        judge_metrics, judge_p, judge_c, judge_called = evaluate_with_oracle_routing(
+            question=question,
+            answer=answer,
+            ground_truth=ground_truth,
+            context_chunks=retrieved_chunks,
+            semantic_sim=semantic_sim,
+            no_judge=no_judge,
+            is_refusal=is_refusal
+        )
 
         # Total tokens and costs
         total_p = gen_p + judge_p
@@ -251,7 +226,7 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
             "completion_tokens": total_c,
             "cost_usd": cost,
             "status": status,
-            "judge_enabled": not no_judge,
+            "judge_enabled": judge_called,
             "cached": _generator_mod.WAS_LAST_CALL_CACHED,
             "prompt_used": f"System prompt version {VERSION_PROMPT} plus top {DEFAULT_TOP_K} documents context."
         }

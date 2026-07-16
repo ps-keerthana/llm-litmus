@@ -1,13 +1,14 @@
 """
-Core LLM Judge Module
+Core LLM Judge Module (core/judge.py)
 Employs an LLM-as-a-judge to evaluate generated answers across multiple dimensions
 (correctness, faithfulness, completeness, hallucination, confidence) in a single JSON API call.
+Implements oracle-efficient routing to bypass judge calls when similarity is unambiguous.
 """
 
 import json
 from typing import List, Dict, Any, Tuple
 from core.generator import call_groq_with_retry
-
+from config import ORACLE_AUTO_PASS_THRESHOLD, ORACLE_AUTO_FAIL_THRESHOLD
 
 def llm_judge_evaluate(
     question: str,
@@ -116,3 +117,75 @@ Return ONLY a valid JSON object. Do not include markdown formatting or wrapping.
             "reasoning": f"Fallback applied due to evaluation error: {e}"
         }
         return fallback_metrics, 0, 0
+
+
+def evaluate_with_oracle_routing(
+    question: str,
+    answer: str,
+    ground_truth: str,
+    context_chunks: List[str],
+    semantic_sim: float,
+    no_judge: bool = False,
+    is_refusal: bool = False
+) -> Tuple[Dict[str, Any], int, int, bool]:
+    """
+    Evaluates answer quality, using oracle-efficient routing to bypass expensive
+    LLM judge calls when semantic similarity is unambiguous.
+    
+    Returns:
+        (metrics_dict, prompt_tokens, completion_tokens, judge_called)
+    """
+    # Case 1: Legacy --no-judge CLI mode
+    if no_judge:
+        correctness_proxy = min(1.0, semantic_sim / 0.75)
+        metrics = {
+            "correctness": round(correctness_proxy, 3),
+            "faithfulness": "Not Evaluated",
+            "completeness": "Not Evaluated",
+            "hallucination": "Not Evaluated",
+            "confidence": round(semantic_sim, 3),
+            "reasoning": f"Judge bypassed: --no-judge flag enabled. Proxy correctness from sim={semantic_sim}."
+        }
+        return metrics, 0, 0, False
+
+    # Case 2: Handled refusal for out-of-scope query
+    if is_refusal:
+        metrics = {
+            "correctness": 1.0,
+            "faithfulness": 1.0,
+            "completeness": 1.0,
+            "hallucination": 0.0,
+            "confidence": 1.0,
+            "reasoning": "Bypassed judge: Correct refusal for out-of-scope question."
+        }
+        return metrics, 0, 0, False
+
+    # Case 3: Oracle Auto-Pass (extremely high semantic similarity)
+    if semantic_sim >= ORACLE_AUTO_PASS_THRESHOLD:
+        metrics = {
+            "correctness": 1.0,
+            "faithfulness": 1.0,
+            "completeness": 1.0,
+            "hallucination": 0.0,
+            "confidence": 1.0,
+            "reasoning": f"Bypassed judge: High semantic similarity ({semantic_sim:.3f} >= {ORACLE_AUTO_PASS_THRESHOLD}) to ground truth."
+        }
+        return metrics, 0, 0, False
+
+    # Case 4: Oracle Auto-Fail (extremely low semantic similarity)
+    if semantic_sim <= ORACLE_AUTO_FAIL_THRESHOLD:
+        metrics = {
+            "correctness": 0.0,
+            "faithfulness": 1.0,  # No hallucinated factual claims are asserted in garbage answers
+            "completeness": 0.0,
+            "hallucination": 0.0,
+            "confidence": 1.0,
+            "reasoning": f"Bypassed judge: Low semantic similarity ({semantic_sim:.3f} <= {ORACLE_AUTO_FAIL_THRESHOLD}) to ground truth."
+        }
+        return metrics, 0, 0, False
+
+    # Case 5: Ambiguous region -> call the LLM judge
+    metrics, p_tokens, c_tokens = llm_judge_evaluate(
+        question, answer, ground_truth, context_chunks
+    )
+    return metrics, p_tokens, c_tokens, True

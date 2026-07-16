@@ -52,3 +52,9 @@ REGRESSION_LIMIT_P95_LATENCY_ABS = 0.3       # Max absolute slowdown in p95 late
 REGRESSION_LIMIT_COST_PERCENT = 20.0        # Max increase in average query cost (%)
 REGRESSION_LIMIT_RETRIEVAL_HIT_RATE = 5.0   # Max drop in retrieval hit rate (%)
 
+# ── Platform Database & Oracle Routing ──────────────────
+DB_PATH = "eval_platform.db"
+ORACLE_AUTO_PASS_THRESHOLD = 0.85
+ORACLE_AUTO_FAIL_THRESHOLD = 0.25
+
+

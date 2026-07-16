@@ -50,7 +50,7 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
         failures.append(f"Pass rate {latest_pass_rate}% falls below absolute threshold {THRESHOLD_PASS_RATE}%")
 
     latest_hall = latest.get("hallucination_rate_avg", 0.0)
-    if latest_hall > THRESHOLD_HALLUCINATION:
+    if isinstance(latest_hall, (int, float)) and latest_hall > THRESHOLD_HALLUCINATION:
         failures.append(f"Average hallucination rate {latest_hall:.3f} exceeds absolute threshold {THRESHOLD_HALLUCINATION}")
 
     latest_p95 = latest.get("p95_latency_sec", 0.0)
@@ -72,12 +72,13 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
             )
 
         base_hall = baseline.get("hallucination_rate_avg", 0.0)
-        hall_rise = latest_hall - base_hall
-        if hall_rise > REGRESSION_LIMIT_HALLUCINATION:
-            failures.append(
-                f"Hallucination rate increased by {hall_rise:.3f} "
-                f"(from {base_hall:.3f} to {latest_hall:.3f}) exceeding limit of {REGRESSION_LIMIT_HALLUCINATION}"
-            )
+        if isinstance(latest_hall, (int, float)) and isinstance(base_hall, (int, float)):
+            hall_rise = latest_hall - base_hall
+            if hall_rise > REGRESSION_LIMIT_HALLUCINATION:
+                failures.append(
+                    f"Hallucination rate increased by {hall_rise:.3f} "
+                    f"(from {base_hall:.3f} to {latest_hall:.3f}) exceeding limit of {REGRESSION_LIMIT_HALLUCINATION}"
+                )
 
         base_p95 = baseline.get("p95_latency_sec", 0.0)
         if base_p95 > 0:

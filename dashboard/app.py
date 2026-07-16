@@ -220,6 +220,10 @@ if nav == "Overview & KPI Matrix":
     st.caption("Active platform status, baseline metadata, and core aggregate KPIs.")
     st.divider()
 
+    # Honest Metrics warning banner
+    if latest.get("judge_enabled") is False:
+        st.warning("⚠️ LLM Judge Metrics (Faithfulness, Hallucination) are disabled for this run (bypassed in smoke test).")
+
     c1, c2, c3, c4 = st.columns(4)
     
     make_metric_card(c1, "Pass Rate", f"{latest.get('pass_rate', 0.0)}%",
@@ -230,9 +234,12 @@ if nav == "Overview & KPI Matrix":
                      "Hit Rate @ K",
                      (latest.get('avg_retrieval_hit_rate', 1.0) - prev.get('avg_retrieval_hit_rate', 1.0))*100 if prev else None)
                      
-    make_metric_card(c3, "Avg Faithfulness", f"{latest.get('avg_faithfulness', 1.0):.3f}",
+    # Display Not Evaluated cleanly in card
+    faith_val = latest.get('avg_faithfulness', 1.0)
+    faith_str = f"{faith_val:.3f}" if isinstance(faith_val, (int, float)) else "N/A (Skipped)"
+    make_metric_card(c3, "Avg Faithfulness", faith_str,
                      "1.00 = grounded context",
-                     latest.get('avg_faithfulness', 1.0) - prev.get('avg_faithfulness', 1.0) if prev else None)
+                     latest.get('avg_faithfulness', 1.0) - prev.get('avg_faithfulness', 1.0) if (prev and isinstance(faith_val, (int, float)) and isinstance(prev.get('avg_faithfulness'), (int, float))) else None)
                      
     make_metric_card(c4, "p95 Latency", f"{latest.get('p95_latency_sec', 0.0):.2f}s",
                      "SLA limit: < 3.5s",
@@ -243,15 +250,24 @@ if nav == "Overview & KPI Matrix":
     # Metadata summary
     col_a, col_b = st.columns(2)
     with col_a:
-        st.subheader("System Metadata")
-        st.json({
-            "timestamp": latest.get("timestamp"),
-            "commit_sha": latest.get("git_commit_hash"),
-            "branch": latest.get("branch"),
-            "mode": latest.get("mode"),
-            "embedding_model": latest.get("embedding_model"),
-            "llm_model": latest.get("llm_model")
-        })
+        st.subheader("Evaluation Metadata Envelope")
+        
+        # Display rich metadata envelope if present, else fallback
+        meta = latest.get("evaluation_metadata", {})
+        if meta:
+            st.json(meta)
+        else:
+            st.json({
+                "timestamp": latest.get("timestamp"),
+                "commit_sha": latest.get("git_commit_hash"),
+                "branch": latest.get("branch"),
+                "mode": latest.get("mode"),
+                "embedding_model": latest.get("embedding_model"),
+                "llm_model": latest.get("llm_model"),
+                "judge_enabled": latest.get("judge_enabled", True),
+                "cache_hit_rate": latest.get("cache_hit_rate", 0.0),
+                "cached_queries_count": latest.get("cached_queries_count", 0)
+            })
     with col_b:
         st.subheader("Failure Classification Breakdown")
         df_q = pd.DataFrame(latest.get("results", []))
@@ -260,7 +276,7 @@ if nav == "Overview & KPI Matrix":
             fail_counts = fails["failure_category"].value_counts().reset_index()
             fail_counts.columns = ["Failure Reason", "Count"]
             fig = px.pie(fail_counts, names="Failure Reason", values="Count", color_discrete_sequence=px.colors.sequential.RdBu)
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         else:
             st.success("All queries passed successfully in this run!")
 
@@ -283,8 +299,12 @@ elif nav == "Metric Trends":
             
         # Normalize faithfulness to percentage
         faithfulness = r.get("avg_faithfulness", 1.0)
-        if faithfulness <= 1.0:
-            faithfulness *= 100.0
+        if isinstance(faithfulness, (int, float)):
+            if faithfulness <= 1.0:
+                faithfulness *= 100.0
+        else:
+            # Skip strings from history graphing
+            faithfulness = None
 
         trend_data.append({
             "timestamp": r.get("timestamp", ""),
@@ -303,16 +323,19 @@ elif nav == "Metric Trends":
         with t1:
             fig = go.Figure()
             fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["pass_rate"], name="Pass Rate (%)", line=dict(color="#6366f1", width=3)))
-            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_faithfulness"], name="Faithfulness (%)", line=dict(color="#10b981", dash="dash")))
+            # Drop None values before plotting
+            df_faith = df_trend.dropna(subset=["avg_faithfulness"])
+            if not df_faith.empty:
+                fig.add_trace(go.Scatter(x=df_faith["timestamp"], y=df_faith["avg_faithfulness"], name="Faithfulness (%)", line=dict(color="#10b981", dash="dash")))
             fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_retrieval_hit_rate"], name="Retrieval Hit Rate (%)", line=dict(color="#f59e0b", dash="dot")))
             fig.update_layout(height=400, template="plotly_dark", xaxis_title="Run Timestamp", yaxis_title="Percentage (%)")
-            st.plotly_chart(fig, use_container_width=True)
+            st.plotly_chart(fig, width="stretch")
         with t2:
             fig2 = go.Figure()
             fig2.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["p95_latency_sec"], name="p95 Latency (s)", line=dict(color="#ef4444", width=3)))
             fig2.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_cost_usd"]*1000, name="Avg Cost x1000 (USD)", line=dict(color="#3b82f6", dash="dot")))
             fig2.update_layout(height=400, template="plotly_dark", xaxis_title="Run Timestamp")
-            st.plotly_chart(fig2, use_container_width=True)
+            st.plotly_chart(fig2, width="stretch")
     else:
         st.info("Execute multiple evaluation runs to generate historical trend analytics.")
 
@@ -338,10 +361,16 @@ elif nav == "Regression Analysis":
     run_a, run_b = runs[idx_a], runs[idx_b]
 
     # Metrics matrix comparison
+    faith_a = run_a.get('avg_faithfulness', 1.0)
+    faith_b = run_b.get('avg_faithfulness', 1.0)
+    faith_a_str = f"{faith_a:.3f}" if isinstance(faith_a, (int, float)) else "N/A"
+    faith_b_str = f"{faith_b:.3f}" if isinstance(faith_b, (int, float)) else "N/A"
+    faith_delta = (faith_b - faith_a) if (isinstance(faith_a, (int, float)) and isinstance(faith_b, (int, float))) else 0.0
+
     metrics = [
         ("Pass Rate", f"{run_a.get('pass_rate', 0.0)}%", f"{run_b.get('pass_rate', 0.0)}%", run_b.get('pass_rate', 0.0) - run_a.get('pass_rate', 0.0), False),
         ("Retrieval Hit Rate", f"{round(run_a.get('avg_retrieval_hit_rate', 1.0)*100, 1)}%", f"{round(run_b.get('avg_retrieval_hit_rate', 1.0)*100, 1)}%", (run_b.get('avg_retrieval_hit_rate', 1.0) - run_a.get('avg_retrieval_hit_rate', 1.0))*100, False),
-        ("Avg Faithfulness", f"{run_a.get('avg_faithfulness', 1.0):.3f}", f"{run_b.get('avg_faithfulness', 1.0):.3f}", run_b.get('avg_faithfulness', 1.0) - run_a.get('avg_faithfulness', 1.0), False),
+        ("Avg Faithfulness", faith_a_str, faith_b_str, faith_delta, False),
         ("p95 Latency", f"{run_a.get('p95_latency_sec', 0.0):.2f}s", f"{run_b.get('p95_latency_sec', 0.0):.2f}s", run_b.get('p95_latency_sec', 0.0) - run_a.get('p95_latency_sec', 0.0), True),
         ("Avg Cost", f"${run_a.get('avg_cost_usd', 0.0):.6f}", f"${run_b.get('avg_cost_usd', 0.0):.6f}", run_b.get('avg_cost_usd', 0.0) - run_a.get('avg_cost_usd', 0.0), True),
     ]
@@ -354,10 +383,31 @@ elif nav == "Regression Analysis":
         comp_rows.append({"Metric": name, "Baseline (A)": va, "Candidate (B)": vb, "Delta": f"{'+' if is_pos else ''}{diff:.4f}", "Status": status})
 
     df_comp = pd.DataFrame(comp_rows)
-    st.dataframe(df_comp.style.map(lambda status: "color: #10b981;" if status == "improved" else ("color: #ef4444;" if status == "regressed" else ""), subset=["Status"]), use_container_width=True)
+    st.dataframe(df_comp.style.map(lambda status: "color: #10b981;" if status == "improved" else ("color: #ef4444;" if status == "regressed" else ""), subset=["Status"]), width="stretch")
 
-    # Detailed regressions list
-    st.subheader("Granular Regressions & Improvements")
+    # Group by category and compute metrics comparison
+    st.subheader("Category-Level Metrics Comparison")
+    df_a = pd.DataFrame(run_a.get("results", []))
+    df_b = pd.DataFrame(run_b.get("results", []))
+
+    if not df_a.empty and not df_b.empty:
+        cat_stats_a = df_a.groupby("category").apply(lambda x: pd.Series({
+            "Pass Rate (A)": f"{round((x['status'] == 'PASS').mean()*100, 1)}%",
+            "Hit Rate (A)": f"{round(x['hit_rate'].mean()*100, 1)}%",
+            "Latency (A)": f"{round(x['latency_sec'].mean(), 2)}s"
+        })).reset_index()
+
+        cat_stats_b = df_b.groupby("category").apply(lambda x: pd.Series({
+            "Pass Rate (B)": f"{round((x['status'] == 'PASS').mean()*100, 1)}%",
+            "Hit Rate (B)": f"{round(x['hit_rate'].mean()*100, 1)}%",
+            "Latency (B)": f"{round(x['latency_sec'].mean(), 2)}s"
+        })).reset_index()
+
+        cat_comparison = pd.merge(cat_stats_a, cat_stats_b, on="category")
+        st.dataframe(cat_comparison, width="stretch")
+
+    # Detailed regressions list (Regression Explorer)
+    st.subheader("Regression Explorer & Degradation Triage")
     q_a = {r["question"]: r for r in run_a.get("results", [])}
     q_b = {r["question"]: r for r in run_b.get("results", [])}
     
@@ -367,19 +417,33 @@ elif nav == "Regression Analysis":
         if ra:
             sa, sb = ra.get("status", "PASS"), rb.get("status", "PASS")
             if sa == "PASS" and sb == "FAIL":
-                regressions.append({"Question": q, "Baseline Answer": ra.get("answer"), "Candidate Answer": rb.get("answer"), "Baseline correctness": ra.get("correctness"), "Candidate correctness": rb.get("correctness")})
+                regressions.append({
+                    "Unique ID": rb.get("unique_id"),
+                    "Question": q,
+                    "Category": rb.get("category"),
+                    "Failure Category": rb.get("failure_category", "unknown"),
+                    "Attribution Reason": rb.get("attribution_reason", "No reason recorded."),
+                    "Baseline sim": ra.get("semantic_similarity"),
+                    "Candidate sim": rb.get("semantic_similarity")
+                })
             elif sa == "FAIL" and sb == "PASS":
-                improvements.append({"Question": q, "Baseline Answer": ra.get("answer"), "Candidate Answer": rb.get("answer")})
+                improvements.append({
+                    "Unique ID": rb.get("unique_id"),
+                    "Question": q,
+                    "Category": rb.get("category"),
+                    "Baseline sim": ra.get("semantic_similarity"),
+                    "Candidate sim": rb.get("semantic_similarity")
+                })
 
     t_reg, t_imp = st.tabs([f"Regressions ({len(regressions)})", f"Improvements ({len(improvements)})"])
     with t_reg:
         if regressions:
-            st.dataframe(pd.DataFrame(regressions), use_container_width=True)
+            st.dataframe(pd.DataFrame(regressions), width="stretch")
         else:
             st.success("No code state regressions detected!")
     with t_imp:
         if improvements:
-            st.dataframe(pd.DataFrame(improvements), use_container_width=True)
+            st.dataframe(pd.DataFrame(improvements), width="stretch")
         else:
             st.info("No newly passing cases found.")
 
@@ -392,38 +456,63 @@ elif nav == "Failure Explorer":
     st.caption("Inspect and debug failures. Every record stores complete context parameters for full reproduction.")
     st.divider()
 
+    # Honest metrics warning
+    if latest.get("judge_enabled") is False:
+        st.warning("⚠️ LLM Judge Metrics (Faithfulness, Hallucination) are disabled for this run (bypassed in smoke test).")
+
     df_q = pd.DataFrame(latest.get("results", []))
     fails = df_q[df_q["status"] == "FAIL"]
     
     if fails.empty:
         st.success("All queries passed in the latest execution run!")
     else:
-        st.subheader("Failed Queries")
-        st.dataframe(fails[["unique_id", "question", "category", "failure_category", "correctness", "faithfulness", "latency_sec", "cost_usd"]], use_container_width=True)
+        tab_summary, tab_trace, tab_charts = st.tabs(["Active Failures Grid", "Diagnostic Trace", "Failure Distributions"])
         
-        st.divider()
-        st.subheader("Failure Trace Diagnostic")
-        selected_id = st.selectbox("Select query to reproduce/inspect", fails["unique_id"].tolist())
-        row = fails[fails["unique_id"] == selected_id].iloc[0]
-        
-        st.markdown(f"#### Question: {row['question']}")
-        
-        c1, c2 = st.columns(2)
-        c1.warning(f"**Failure Category:** {row.get('failure_category', 'unknown')}")
-        c2.info(f"**LLM Grader Reason:** {row.get('judge_reasoning', 'unknown')}")
-        
-        st.markdown("**Expected Ground Truth:**")
-        st.code(row["ground_truth"])
-        st.markdown("**Generated Answer:**")
-        st.code(row["answer"])
-        
-        with st.expander("Show Retrieved Context Chunks"):
-            for i, chunk in enumerate(row.get("retrieved_chunks", [])):
-                source = row.get("retrieved_sources", ["unknown"] * (i+1))[i]
-                sim = row.get("retrieved_similarities", [0.0] * (i+1))[i]
-                st.markdown(f"**Chunk {i+1} [Source: {source} | similarity: {sim}]:**")
-                st.write(chunk)
-                st.divider()
+        with tab_summary:
+            st.subheader("Failed Queries")
+            df_fails_summary = fails[["unique_id", "question", "category", "failure_category", "attribution_reason", "correctness", "faithfulness", "latency_sec"]]
+            st.dataframe(df_fails_summary, width="stretch")
+            
+        with tab_trace:
+            st.subheader("Failure Trace Diagnostic")
+            selected_id = st.selectbox("Select query to reproduce/inspect", fails["unique_id"].tolist())
+            row = fails[fails["unique_id"] == selected_id].iloc[0]
+            
+            st.markdown(f"#### Question: {row['question']}")
+            
+            c1, c2 = st.columns(2)
+            c1.warning(f"**Failure Category:** {row.get('failure_category', 'unknown')}")
+            c2.info(f"**LLM Grader Reason:** {row.get('judge_reasoning', 'unknown')}")
+            
+            # Retrieval/Generation Diagnosis Flags
+            diag = row.get("retrieval_diagnosis", {})
+            if diag:
+                st.markdown("### Telemetry Triage Indicators")
+                cd1, cd2, cd3, cd4 = st.columns(4)
+                cd1.markdown(f"**Correct Context Retrieved?** {'✅' if diag.get('context_retrieved', False) else '❌'}")
+                cd2.markdown(f"**Retrieved Context Sufficient?** {'✅' if diag.get('context_sufficient', False) else '❌'}")
+                cd3.markdown(f"**Model Utilized Context?** {'✅' if diag.get('model_used_context', False) else '❌'}")
+                cd4.markdown(f"**Model Hallucinated?** {'❌' if not diag.get('model_hallucinated', False) else '✅'}")
+            
+            st.markdown("**Expected Ground Truth:**")
+            st.code(row["ground_truth"])
+            st.markdown("**Generated Answer:**")
+            st.code(row["answer"])
+            
+            with st.expander("Show Retrieved Context Chunks"):
+                for i, chunk in enumerate(row.get("retrieved_chunks", [])):
+                    source = row.get("retrieved_sources", ["unknown"] * (i+1))[i]
+                    sim = row.get("retrieved_similarities", [0.0] * (i+1))[i]
+                    st.markdown(f"**Chunk {i+1} [Source: {source} | similarity: {sim}]:**")
+                    st.write(chunk)
+                    st.divider()
+
+        with tab_charts:
+            st.subheader("Aggregated Failure Classification")
+            fail_counts = fails["failure_category"].value_counts().reset_index()
+            fail_counts.columns = ["Failure Category", "Count"]
+            fig_fail = px.bar(fail_counts, x="Failure Category", y="Count", color="Failure Category", template="plotly_dark")
+            st.plotly_chart(fig_fail, width="stretch")
 
 
 # ══════════════════════════════════════════════════════════
@@ -478,10 +567,10 @@ elif nav == "Cost Analytics":
     st.subheader("Cost by Question Category")
     cat_cost = df_q.groupby("category")["cost_usd"].sum().reset_index()
     fig = px.bar(cat_cost, x="category", y="cost_usd", title="Total cost per category", color="category", template="plotly_dark")
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     st.subheader("Most Expensive Queries")
-    st.dataframe(df_q.sort_values(by="cost_usd", ascending=False)[["unique_id", "question", "category", "prompt_tokens", "completion_tokens", "cost_usd"]].head(10), use_container_width=True)
+    st.dataframe(df_q.sort_values(by="cost_usd", ascending=False)[["unique_id", "question", "category", "prompt_tokens", "completion_tokens", "cost_usd"]].head(10), width="stretch")
 
 
 # ══════════════════════════════════════════════════════════
@@ -500,12 +589,21 @@ elif nav == "Latency Analytics":
     c3.metric("p95 SLA Speed", f"{latest.get('p95_latency_sec', 0.0):.2f}s")
     c4.metric("p99 Outlier Speed", f"{latest.get('p99_latency_sec', 0.0):.2f}s")
 
+    st.subheader("Latency SLA Exceedances")
+    df_q["sla_violation"] = df_q["latency_sec"] > config.THRESHOLD_P95_LATENCY
+    violators = df_q[df_q["sla_violation"]]
+    if not violators.empty:
+        st.error(f"⚠️ Detected {len(violators)} queries violating the {config.THRESHOLD_P95_LATENCY}s SLA.")
+        st.dataframe(violators[["unique_id", "question", "category", "latency_sec"]], width="stretch")
+    else:
+        st.success("All queries satisfy the latency SLA constraints.")
+
     st.subheader("Latency Distribution Histogram")
     fig = px.histogram(df_q, x="latency_sec", nbins=20, title="Distribution of Query Processing Speed", template="plotly_dark", color_discrete_sequence=["#10b981"])
-    st.plotly_chart(fig, use_container_width=True)
+    st.plotly_chart(fig, width="stretch")
 
     st.subheader("Slowest Queries")
-    st.dataframe(df_q.sort_values(by="latency_sec", ascending=False)[["unique_id", "question", "category", "latency_sec"]].head(10), use_container_width=True)
+    st.dataframe(df_q.sort_values(by="latency_sec", ascending=False)[["unique_id", "question", "category", "latency_sec"]].head(10), width="stretch")
 
 
 # ══════════════════════════════════════════════════════════
@@ -532,7 +630,7 @@ elif nav == "Prompt Playground":
         test_q = st.text_input("Test Question", value="What is the maximum deduction under Section 80C?")
         test_gt = st.text_area("Expected Answer (Ground Truth)", value="The maximum deduction under Section 80C is Rs 1.5 lakh per financial year.")
         
-        execute_sandbox = st.button("Run Sandbox Execution", use_container_width=True)
+        execute_sandbox = st.button("Run Sandbox Execution", width="stretch")
 
     with col_res:
         st.subheader("Inference Diagnostic Report")
@@ -597,4 +695,5 @@ elif nav == "Dataset Explorer":
     if f_diff != "All":
         filtered_ds = filtered_ds[filtered_ds["difficulty"] == f_diff]
 
-    st.dataframe(filtered_ds[["unique_id", "category", "difficulty", "tags", "expected_sources", "reasoning_type", "question", "ground_truth"]], use_container_width=True)
+    st.dataframe(filtered_ds[["unique_id", "category", "difficulty", "tags", "expected_sources", "reasoning_type", "question", "ground_truth"]], width="stretch")
+

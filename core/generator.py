@@ -134,10 +134,13 @@ def generate_answer(
 
     if system_prompt is None:
         system_prompt = (
-            "You are a helpful Indian income tax assistant. "
-            "Answer the question using ONLY the context below.\n"
-            "If the answer is not in the context, say \"I don't have information about that.\""
+            "You are a helpful Indian income tax assistant. Answer the question using ONLY the context below.\n"
+            "If the context contains a rule, limit, or eligibility criteria that directly implies the answer to the question "
+            "(e.g. minimum requirements, numerical comparisons, or exclusions), apply that rule to deduce the answer. "
+            "Do not refuse to answer simply because the final conclusion is not written verbatim, provided the logic can be directly deduced from the context.\n"
+            "If the answer cannot be deduced or found in the context, say \"I don't have information about that.\""
         )
+
 
     prompt = f"""{system_prompt}
 

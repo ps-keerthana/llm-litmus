@@ -27,3 +27,6 @@ Thumbs.db
 
 # Evaluation cache
 .eval_cache.json
+
+# Local reports
+eval_summary.md

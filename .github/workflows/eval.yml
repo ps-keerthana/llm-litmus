@@ -41,28 +41,16 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Evaluation Suite (Smoke Test)
+      - name: Run Evaluation Suite (Full Benchmark)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # Smoke mode: 10 queries (2/category, seed=42), no LLM judge.
-          #
-          # Why --no-judge:
-          #   Each generation call uses ~500 tokens. The judge would add another
-          #   ~900 tokens per query. With 10 queries, that doubles API usage from
-          #   ~5,000 to ~14,000 tokens — plus 10 extra RPM slots.
-          #   On a free-tier Groq account this is risky if the account was also
-          #   used locally in the same minute window.
-          #
-          # Why this is safe:
-          #   The CI gate checks pass_rate and retrieval_hit_rate, which are
-          #   measured using local semantic similarity (no API calls).
-          #   Hallucination gating runs on full evaluations triggered manually
-          #   or on a schedule (see CONTRIBUTING.md).
-          python evaluate.py --smoke --no-judge
+          # Full evaluation runs the complete set of questions from the golden dataset
+          # with LLM-as-a-judge scoring enabled.
+          python evaluate.py
 
-      - name: Verify CI Quality Gate (Smoke Mode)
-        run: python ci_gate.py --mode smoke
+      - name: Verify CI Quality Gate (Full Mode & Regressions)
+        run: python ci_gate.py --mode full
 
       - name: Publish Actions Step Summary
         if: always()

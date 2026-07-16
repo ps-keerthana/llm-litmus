@@ -6,7 +6,9 @@ implementing robust retries, token usage logging, and cost analysis.
 
 import os
 import time
-from typing import List, Tuple, Dict, Any, Optional
+import threading
+import collections
+from typing import List, Tuple, Dict, Any, Optional, Deque
 from groq import Groq
 from config import MODEL_NAME
 
@@ -18,6 +20,44 @@ WAS_LAST_CALL_CACHED: bool = False
 # max_retries=0: we disable the SDK's internal retry so OUR wrapper owns
 # the full retry policy with proper Retry-After header handling.
 _groq_client: Optional[Groq] = None
+
+# ── Proactive sliding-window rate limiter ───────────────────
+# Groq free tier: 30 RPM for llama-3.3-70b-versatile.
+# We self-limit to 25 RPM (83% of limit) so we never hit 429
+# proactively — no reactive waits, no 60s penalty pauses.
+_RATE_LIMIT_RPM: int = 25
+_rate_lock = threading.Lock()
+_request_timestamps: Deque[float] = collections.deque()
+
+
+def _throttle() -> None:
+    """
+    Proactive sliding-window rate limiter.
+    Blocks until we are safely below the RPM cap before firing
+    an API call. Adds sleep time to LAST_API_SLEEP_TIME so latency
+    accounting stays accurate.
+    """
+    global LAST_API_SLEEP_TIME
+    window = 60.0
+    with _rate_lock:
+        now = time.monotonic()
+        # Drop timestamps older than the sliding window
+        while _request_timestamps and now - _request_timestamps[0] >= window:
+            _request_timestamps.popleft()
+
+        if len(_request_timestamps) >= _RATE_LIMIT_RPM:
+            # Wait until the oldest request falls outside the window
+            oldest = _request_timestamps[0]
+            wait_s = round(window - (now - oldest) + 0.05, 3)  # tiny buffer
+            if wait_s > 0:
+                print(
+                    f"  [Rate Limiter] Proactive throttle: {len(_request_timestamps)}/{_RATE_LIMIT_RPM} "
+                    f"RPM used. Sleeping {wait_s:.1f}s to respect Groq quota..."
+                )
+                time.sleep(wait_s)
+                LAST_API_SLEEP_TIME += wait_s
+
+        _request_timestamps.append(time.monotonic())
 
 
 def _get_groq_client() -> Groq:
@@ -75,6 +115,9 @@ def call_groq_with_retry(
     backoff = 2.0
     for attempt in range(max_retries):
         try:
+            # Proactively throttle before each attempt to stay under RPM cap
+            _throttle()
+
             kwargs: Dict[str, Any] = {
                 "model": MODEL_NAME,
                 "messages": messages,

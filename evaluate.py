@@ -27,6 +27,9 @@ from core.generator import generate_answer
 from core.metrics import compute_semantic_similarity
 from core.judge import llm_judge_evaluate
 from core.utils import get_git_sha, get_git_branch, calculate_cost, logger
+from core.attributor import attribute_failure, build_retrieval_diagnosis
+import core.generator as _generator_mod
+
 
 
 def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any]:
@@ -80,6 +83,8 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
     results = []
     passed = 0
     failed = 0
+    cached_hits = 0
+
 
     # Minimum similarity threshold to skip LLM judge calls and prevent rate limits
     BYPASS_SIM_THRESHOLD = 0.90
@@ -127,19 +132,20 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         answer, gen_p, gen_c = generate_answer(question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE)
         elapsed = time.time() - gen_start
 
+        if _generator_mod.WAS_LAST_CALL_CACHED:
+            cached_hits += 1
+
         # Enforce minimum inter-request interval to stay within RPM limits.
         # Skip this delay if the call was loaded from cache (no API call made).
-        import core.generator as _gen_mod
-        if not _gen_mod.WAS_LAST_CALL_CACHED:
-            already_waited = _gen_mod.LAST_API_SLEEP_TIME
+        if not _generator_mod.WAS_LAST_CALL_CACHED:
+            already_waited = _generator_mod.LAST_API_SLEEP_TIME
             effective_elapsed = elapsed - already_waited
             remaining_wait = max(0.0, MIN_REQUEST_INTERVAL_SEC - effective_elapsed)
             if remaining_wait > 0 and idx < len(questions) - 1:  # no need to wait after last query
                 time.sleep(remaining_wait)
         
         # Subtract any rate-limiting sleep duration to get the true execution latency
-        import core.generator
-        latency = round(max(0.0, elapsed - core.generator.LAST_API_SLEEP_TIME), 2)
+        latency = round(max(0.0, elapsed - _generator_mod.LAST_API_SLEEP_TIME), 2)
 
         # ── 3. Evaluation & LLM Judge Step ────────────────────
         semantic_sim = compute_semantic_similarity(answer, ground_truth)
@@ -164,9 +170,9 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
             correctness_proxy = min(1.0, semantic_sim / 0.75)  # scaled to [0, 1]
             judge_metrics = {
                 "correctness": round(correctness_proxy, 3),
-                "faithfulness": 1.0,
-                "completeness": round(correctness_proxy, 3),
-                "hallucination": 0.0,
+                "faithfulness": "Not Evaluated",
+                "completeness": "Not Evaluated",
+                "hallucination": "Not Evaluated",
                 "confidence": round(semantic_sim, 3),
                 "reasoning": f"Judge skipped (--no-judge). Proxy correctness from sim={semantic_sim}."
             }
@@ -200,33 +206,21 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         cost = calculate_cost(total_p, total_c)
 
         # Pass/Fail Classification
-        is_correct = semantic_sim >= MIN_SEMANTIC_SIM or judge_metrics["correctness"] >= MIN_LLM_CORRECTNESS
-        is_faithful = judge_metrics["hallucination"] <= MAX_HALLUCINATION
+        is_correct = semantic_sim >= MIN_SEMANTIC_SIM or (
+            judge_metrics["correctness"] >= MIN_LLM_CORRECTNESS if isinstance(judge_metrics["correctness"], (int, float)) else False
+        )
+        is_faithful = (
+            judge_metrics["hallucination"] <= MAX_HALLUCINATION if isinstance(judge_metrics["hallucination"], (int, float)) else True
+        )
         status = "PASS" if is_correct and is_faithful else "FAIL"
-
-        # Failure Diagnosis Classification (to help developers trace retrieval vs generation bugs)
-        failure_category = "N/A"
-        if status == "FAIL":
-            if ret_metrics["hit_rate"] == 0.0:
-                failure_category = "Retrieval Failure (Missing Source)"
-            elif ret_metrics["context_recall"] < 0.5:
-                failure_category = "Retrieval Failure (Low Context Recall)"
-            elif judge_metrics["hallucination"] > MAX_HALLUCINATION:
-                failure_category = "LLM Hallucination"
-            elif judge_metrics["completeness"] < 0.70:
-                failure_category = "LLM Incomplete Answer"
-            elif latency > THRESHOLD_P95_LATENCY:
-                failure_category = "SLA Latency Violation"
-            else:
-                failure_category = "LLM Generation Mismatch"
 
         if status == "PASS":
             passed += 1
         else:
             failed += 1
 
-        # Save query record for complete failure reproducibility
-        results.append({
+        # Build query record for complete failure reproducibility
+        record = {
             "unique_id": q_id,
             "question": question,
             "ground_truth": ground_truth,
@@ -257,13 +251,23 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
             "completion_tokens": total_c,
             "cost_usd": cost,
             "status": status,
-            "failure_category": failure_category,
-            "prompt_used": (
-                "Indian tax assistant context system prompt plus top 3 document chunks context prompt."
-            )
-        })
+            "judge_enabled": not no_judge,
+            "cached": _generator_mod.WAS_LAST_CALL_CACHED,
+            "prompt_used": f"System prompt version {VERSION_PROMPT} plus top {DEFAULT_TOP_K} documents context."
+        }
+
+        # Run failure attribution & diagnosis
+        failure_category, attribution_reason = attribute_failure(record)
+        retrieval_diagnosis = build_retrieval_diagnosis(record)
+
+        record["failure_category"] = failure_category
+        record["attribution_reason"] = attribution_reason
+        record["retrieval_diagnosis"] = retrieval_diagnosis
+
+        results.append(record)
 
         time.sleep(1.8)  # Rate limit safety sleep
+
 
     # ── Aggregate Calculations ─────────────────────────────
     latencies = [r["latency_sec"] for r in results]
@@ -272,11 +276,18 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
     p99 = round(float(np.percentile(latencies, 99)), 2) if latencies else 0.0
     avg_lat = round(sum(latencies) / len(latencies), 2) if latencies else 0.0
 
-    avg_hall = round(sum(r["hallucination_rate"] for r in results) / len(results), 3) if results else 0.0
-    avg_faith = round(sum(r["faithfulness"] for r in results) / len(results), 3) if results else 0.0
-    avg_sim = round(sum(r["semantic_similarity"] for r in results) / len(results), 3) if results else 0.0
-    avg_corr = round(sum(r["correctness"] for r in results) / len(results), 3) if results else 0.0
-    avg_comp = round(sum(r["completeness"] for r in results) / len(results), 3) if results else 0.0
+    def _safe_avg(results, key, default=0.0):
+        """Average over numeric values only; returns 'Not Evaluated' if all entries are strings."""
+        nums = [r[key] for r in results if isinstance(r.get(key), (int, float))]
+        if not nums:
+            return "Not Evaluated"
+        return round(sum(nums) / len(nums), 3)
+
+    avg_hall = _safe_avg(results, "hallucination_rate")
+    avg_faith = _safe_avg(results, "faithfulness")
+    avg_sim = _safe_avg(results, "semantic_similarity")
+    avg_corr = _safe_avg(results, "correctness")
+    avg_comp = _safe_avg(results, "completeness")
     avg_hit = round(sum(r["hit_rate"] for r in results) / len(results), 3) if results else 0.0
     avg_mrr = round(sum(r["mrr"] for r in results) / len(results), 3) if results else 0.0
     avg_prec = round(sum(r["context_precision"] for r in results) / len(results), 3) if results else 0.0
@@ -285,9 +296,13 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
     total_cost = round(sum(r["cost_usd"] for r in results), 6)
     avg_cost = round(total_cost / len(results), 6) if results else 0.0
 
+
     timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
     commit_sha = get_git_sha()
     branch_name = get_git_branch()
+
+    # Calculate cache stats
+    cache_hit_rate = round(cached_hits / len(results) * 100, 1) if results else 0.0
 
     summary_entry = {
         "timestamp": timestamp,
@@ -318,7 +333,24 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         "passed": passed,
         "failed": failed,
         "mode": "smoke" if smoke else "full",
-        "judge_enabled": not no_judge
+        "judge_enabled": not no_judge,
+        "cached_queries_count": cached_hits,
+        "cache_hit_rate": cache_hit_rate,
+        "evaluation_metadata": {
+            "git_commit": commit_sha,
+            "evaluation_timestamp": timestamp,
+            "run_mode": "smoke" if smoke else "full",
+            "model_name": VERSION_LLM,
+            "prompt_version": VERSION_PROMPT,
+            "dataset_version": VERSION_DATASET,
+            "embedding_model": VERSION_EMBEDDING,
+            "retriever_name": "ChromaDB vector store",
+            "chunking_strategy": "Double newline delimiter",
+            "judge_enabled": not no_judge,
+            "cache_enabled": True,
+            "cache_hit_rate": cache_hit_rate,
+            "cached_queries_count": cached_hits
+        }
     }
 
     # Save detailed runs containing all diagnostics
@@ -328,6 +360,7 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
     full_output = {**summary_entry, "results": results}
     with open(detailed_run_path, "w", encoding="utf-8") as f:
         json.dump(full_output, f, indent=2)
+
 
     # Log metrics to centralized history tracking module
     from core.reporter import append_to_metrics_history

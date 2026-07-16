@@ -61,7 +61,7 @@ def call_groq_with_retry(
     messages: List[Dict[str, str]],
     response_format: Optional[Dict[str, str]] = None,
     temperature: float = 0.0,
-    max_retries: int = 5
+    max_retries: int = 8
 ) -> Any:
     """
     Executes Groq API chat completions with proper rate-limit handling:

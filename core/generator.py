@@ -8,9 +8,12 @@ import os
 import time
 import threading
 import collections
+import logging
 from typing import List, Tuple, Dict, Any, Optional, Deque
 from groq import Groq
 from config import MODEL_NAME
+
+logger = logging.getLogger(__name__)
 
 # Module-level globals to track wait latency and cache status
 LAST_API_SLEEP_TIME: float = 0.0
@@ -50,9 +53,9 @@ def _throttle() -> None:
             oldest = _request_timestamps[0]
             wait_s = round(window - (now - oldest) + 0.05, 3)  # tiny buffer
             if wait_s > 0:
-                print(
-                    f"  [Rate Limiter] Proactive throttle: {len(_request_timestamps)}/{_RATE_LIMIT_RPM} "
-                    f"RPM used. Sleeping {wait_s:.1f}s to respect Groq quota..."
+                logger.info(
+                    f"[Rate Limiter] {len(_request_timestamps)}/{_RATE_LIMIT_RPM} RPM used — "
+                    f"sleeping {wait_s:.1f}s to stay under Groq quota..."
                 )
                 time.sleep(wait_s)
                 LAST_API_SLEEP_TIME += wait_s
@@ -134,15 +137,15 @@ def call_groq_with_retry(
             # Add small jitter (±10%) to prevent thundering herd in parallel CI jobs
             jitter = wait * 0.1 * (0.5 - (attempt % 2) * 0.5)
             sleep_s = round(wait + jitter, 2)
-            print(
-                f"  [Rate Limit] 429 on attempt {attempt + 1}/{max_retries}. "
-                f"Retry-After={wait:.1f}s → sleeping {sleep_s:.1f}s..."
+            logger.info(
+                f"[Rate Limit] 429 received (attempt {attempt + 1}/{max_retries}). "
+                f"Groq says wait {wait:.0f}s — sleeping {sleep_s:.1f}s then retrying automatically..."
             )
             time.sleep(sleep_s)
             LAST_API_SLEEP_TIME += sleep_s
 
         except Exception as e:
-            print(f"  [Warning] Groq API call failed (attempt {attempt + 1}/{max_retries}): {e}")
+            logger.warning(f"[API Error] Groq call failed (attempt {attempt + 1}/{max_retries}): {e}")
             if attempt == max_retries - 1:
                 raise
             # Exponential backoff with jitter for transient errors (network, timeout)

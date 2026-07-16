@@ -11,7 +11,7 @@ EVAL_RESULTS_DIR = "eval_results"
 METRICS_HISTORY_PATH = "metrics_history.json"
 
 # ── Model & API Settings ──────────────────────────────────
-MODEL_NAME = "llama-3.1-8b-instant"
+MODEL_NAME = "llama-3.3-70b-versatile"
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Groq pricing details per 1 million tokens (USD)

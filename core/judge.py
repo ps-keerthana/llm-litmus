@@ -59,6 +59,19 @@ Provide your evaluation as a JSON object with these exact keys:
 
 Return ONLY a valid JSON object. Do not include markdown formatting or wrapping."""
 
+    # Check cache first to bypass Groq rate limits for identical outputs
+    from core.cache import get_cache_key, lookup_cache, update_cache
+    from config import MODEL_NAME
+    cache_payload = f"JUDGE|{question}|{answer}|{ground_truth}|{context}"
+    cache_key = get_cache_key(f"judge-{MODEL_NAME}", cache_payload, 0.0)
+    cached = lookup_cache(cache_key)
+    if cached is not None:
+        return (
+            cached["metrics"],
+            cached["prompt_tokens"],
+            cached["completion_tokens"]
+        )
+
     try:
         response = call_groq_with_retry(
             messages=[{"role": "user", "content": prompt}],
@@ -82,6 +95,13 @@ Return ONLY a valid JSON object. Do not include markdown formatting or wrapping.
         
         prompt_tokens = usage.prompt_tokens if usage else 0
         completion_tokens = usage.completion_tokens if usage else 0
+        
+        # Save to cache
+        update_cache(cache_key, {
+            "metrics": metrics,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens
+        })
         
         return metrics, prompt_tokens, completion_tokens
     except Exception as e:

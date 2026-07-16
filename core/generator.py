@@ -10,9 +10,9 @@ from typing import List, Tuple, Dict, Any, Optional
 from groq import Groq
 from config import MODEL_NAME
 
-# Module-level global to track cumulative sleep time for latency correction.
-# evaluate.py subtracts this from wall-clock time to get true RAG latency.
+# Module-level globals to track wait latency and cache status
 LAST_API_SLEEP_TIME: float = 0.0
+WAS_LAST_CALL_CACHED: bool = False
 
 # Lazy-initialized Groq client — only created on first actual API call.
 # max_retries=0: we disable the SDK's internal retry so OUR wrapper owns
@@ -126,8 +126,9 @@ def generate_answer(
     Returns:
         (generated_answer, prompt_tokens, completion_tokens)
     """
-    global LAST_API_SLEEP_TIME
+    global LAST_API_SLEEP_TIME, WAS_LAST_CALL_CACHED
     LAST_API_SLEEP_TIME = 0.0
+    WAS_LAST_CALL_CACHED = False
 
     context = "\n\n".join(context_chunks)
 
@@ -147,6 +148,18 @@ Question: {question}
 
 Answer:"""
 
+    # Check cache first to bypass Groq limits and reduce query overhead
+    from core.cache import get_cache_key, lookup_cache, update_cache
+    cache_key = get_cache_key(MODEL_NAME, prompt, temperature)
+    cached = lookup_cache(cache_key)
+    if cached is not None:
+        WAS_LAST_CALL_CACHED = True
+        return (
+            cached["answer"],
+            cached["prompt_tokens"],
+            cached["completion_tokens"]
+        )
+
     try:
         response = call_groq_with_retry(
             messages=[{"role": "user", "content": prompt}],
@@ -159,6 +172,14 @@ Answer:"""
         usage = getattr(response, "usage", None)
         prompt_tokens = usage.prompt_tokens if usage else 0
         completion_tokens = usage.completion_tokens if usage else 0
+        
+        # Save to cache
+        update_cache(cache_key, {
+            "answer": answer,
+            "prompt_tokens": prompt_tokens,
+            "completion_tokens": completion_tokens
+        })
+        
         return answer, prompt_tokens, completion_tokens
 
     except Exception as e:

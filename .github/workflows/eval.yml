@@ -41,16 +41,17 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
-      - name: Run Evaluation Suite (Full Benchmark)
+      - name: Run Evaluation Suite (Smoke Test)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # Full evaluation runs the complete set of questions from the golden dataset
-          # with LLM-as-a-judge scoring enabled.
-          python evaluate.py
+          # Smoke mode: 10 queries (2/category, seed=42), no LLM judge.
+          # Keeps CI fast and within Groq free-tier rate limits.
+          # Full quality gates run nightly via eval_full.yml.
+          python evaluate.py --smoke --no-judge
 
-      - name: Verify CI Quality Gate (Full Mode & Regressions)
-        run: python ci_gate.py --mode full
+      - name: Verify CI Quality Gate (Smoke Mode)
+        run: python ci_gate.py --mode smoke
 
       - name: Publish Actions Step Summary
         if: always()

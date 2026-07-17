@@ -149,7 +149,7 @@ def acquire(estimated_prompt_tokens: int) -> float:
     float
         Total seconds spent waiting inside this call (for latency accounting).
     """
-    estimated_total = estimated_prompt_tokens + SCHEDULER_ESTIMATED_OUTPUT_TOKENS
+    estimated_total = min(SCHEDULER_MAX_TPM, estimated_prompt_tokens + SCHEDULER_ESTIMATED_OUTPUT_TOKENS)
     total_waited = 0.0
 
     while True:
@@ -208,6 +208,43 @@ def refund(estimated_tokens: int, actual_tokens: int) -> None:
     except Exception as exc:  # noqa: BLE001
         # Refund is best-effort — never crash a call because of a refund failure.
         logger.warning("[SCHEDULER] refund failed (non-fatal): %s", exc)
+
+
+def drain() -> None:
+    """
+    Empties the token bucket to zero immediately.
+
+    Call this after a reactive 429 to prevent the "bucket refills during
+    Groq's retry-after sleep then fires immediately" failure mode.
+
+    When a 429 occurs, we sleep for the provider's Retry-After duration.
+    During that sleep (often 400–900 seconds), the SQLite bucket naturally
+    refills to full capacity (since elapsed > 60s window). Without draining,
+    the next acquire() returns 0 wait and fires immediately — triggering
+    another 429 from the same depleted provider quota.
+
+    After drain(), the next acquire() will wait for the bucket to refill
+    at the normal 1/RPM rate (5–10s per request slot), giving Groq's
+    actual quota window time to recover.
+    """
+    def _do_drain(conn: sqlite3.Connection) -> None:
+        now = time.time()
+        conn.execute(
+            """
+            UPDATE rate_limit_buckets
+               SET rpm_remaining  = 0.0,
+                   tpm_remaining  = 0.0,
+                   last_refill_time = ?
+             WHERE bucket_id = ?;
+            """,
+            (now, SCHEDULER_BUCKET_ID),
+        )
+
+    try:
+        _locked_transaction(_do_drain)
+        logger.info("[SCHEDULER] bucket drained after reactive 429 — next acquire() will pace normally")
+    except Exception as exc:  # noqa: BLE001
+        logger.warning("[SCHEDULER] drain failed (non-fatal): %s", exc)
 
 
 # ── Internal helpers ───────────────────────────────────────────────────────────

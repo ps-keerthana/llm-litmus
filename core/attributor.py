@@ -119,10 +119,38 @@ def attribute_failure(result: Dict[str, Any]) -> Tuple[str, str]:
     """
     status = result.get("status", "PASS")
     if status == "PASS":
+        result["diagnostic_report"] = None
         return "N/A", "Query passed all quality checks."
 
     # Execute counterfactual diagnoser sandbox for failed queries
-    category, reason, _, _ = run_counterfactual_diagnosis(result)
+    category, reason, cf_answer, cf_sim = run_counterfactual_diagnosis(result)
+
+    # Construct the structured diagnostic report
+    evidence = reason
+    recommended_action = "Manually review the query, prompt, and model behavior."
+    cf_result = "N/A"
+
+    if category == "Knowledge Base Gap":
+        cf_result = "Bypassed (Ground truth document missing)"
+        recommended_action = "Ingest missing documents into docs directory and rebuild the vector store index."
+    elif category == "Retrieval Failure":
+        cf_result = f"Pass (similarity={cf_sim:.3f})"
+        recommended_action = "Optimize retrieval parameters (e.g. increase top_k, refine chunking, or tune embedding/search)."
+    elif category == "LLM Generation Failure":
+        cf_result = f"Fail (similarity={cf_sim:.3f})"
+        recommended_action = "Improve the generation prompt template or use a more capable LLM model."
+    elif category == "Needs Manual Review":
+        cf_result = "Error"
+        recommended_action = "Manually review the query, prompt, and model behavior."
+
+    report = {
+        "failure_category": category,
+        "counterfactual_result": cf_result,
+        "evidence": evidence,
+        "recommended_action": recommended_action
+    }
+    result["diagnostic_report"] = report
+
     return category, reason
 
 

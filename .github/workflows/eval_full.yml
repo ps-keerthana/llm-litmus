@@ -12,6 +12,7 @@ concurrency:
 jobs:
   evaluate-full:
     runs-on: ubuntu-latest
+    timeout-minutes: 180      # 204 queries + LLM judge calls @ 12 RPM ≈ 34 min API + overhead
 
     steps:
       - name: Checkout code
@@ -41,12 +42,14 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-eval-db-v1-
 
-      - name: Run Full Evaluation (All golden questions, LLM judge enabled)
+      - name: Run Full Evaluation (All golden questions, LLM judge enabled, no diagnoser)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # Full mode evaluation: runs LLM grader & absolute threshold checks
-          python evaluate.py
+          # Full mode: all 204 queries, LLM judge ON for faithfulness/hallucination,
+          # counterfactual diagnoser OFF to prevent post-failure API bursts.
+          # Proactive scheduler paces at 12 RPM / 12,000 TPM — no reactive 429 waits.
+          python evaluate.py --no-diag
 
       - name: Verify Quality Gate (Full Mode & Regressions)
         run: python ci_gate.py --mode full

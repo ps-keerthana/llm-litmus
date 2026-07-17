@@ -111,6 +111,7 @@ def init_db() -> None:
                 failure_category TEXT,
                 attribution_reason TEXT,
                 retrieval_diagnosis TEXT,
+                diagnostic_report TEXT,
                 judge_enabled INTEGER,
                 cached INTEGER,
                 prompt_used TEXT,
@@ -122,3 +123,10 @@ def init_db() -> None:
         # Add index for speed on key lookups
         conn.execute("CREATE INDEX IF NOT EXISTS idx_eval_results_run ON eval_results(run_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_eval_queue_run ON eval_queue(run_id);")
+
+        # Graceful migration for existing databases: add diagnostic_report column if missing
+        try:
+            conn.execute("ALTER TABLE eval_results ADD COLUMN diagnostic_report TEXT;")
+        except sqlite3.OperationalError:
+            # Column already exists, ignore
+            pass

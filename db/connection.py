@@ -130,15 +130,22 @@ def init_db() -> None:
                 bucket_id          TEXT PRIMARY KEY,
                 last_refill_time   REAL NOT NULL,     -- Unix wall-clock timestamp
                 rpm_remaining      REAL NOT NULL,     -- Fractional request slots remaining
-                tpm_remaining      REAL NOT NULL      -- Fractional token slots remaining
+                tpm_remaining      REAL NOT NULL,     -- Fractional token slots remaining
+                last_request_time  REAL DEFAULT 0.0   -- Unix wall-clock of last debit
             );
         """)
 
         # ── Graceful migrations for existing databases ────────────────────────
         # Each ALTER TABLE is wrapped in try/except; already-present columns are silently ignored.
 
-        # Step 5: diagnostic_report column
+        # Migration 1: diagnostic_report column
         try:
             conn.execute("ALTER TABLE eval_results ADD COLUMN diagnostic_report TEXT;")
+        except sqlite3.OperationalError:
+            pass  # Column already exists
+
+        # Migration 2: last_request_time column
+        try:
+            conn.execute("ALTER TABLE rate_limit_buckets ADD COLUMN last_request_time REAL DEFAULT 0.0;")
         except sqlite3.OperationalError:
             pass  # Column already exists

@@ -90,15 +90,15 @@ def call_groq_with_retry(
     from groq import RateLimitError
     from config import SCHEDULER_ESTIMATED_OUTPUT_TOKENS
 
-    # Proactively acquire capacity ONCE before attempting the call.
-    # The scheduler blocks here if the bucket is empty.
-    wait_s = scheduler.acquire(_estimated_tokens)
-    LAST_API_SLEEP_TIME += wait_s
-
     backoff = 2.0
     response = None
     for attempt in range(max_retries):
         try:
+            # Proactively acquire capacity before each attempt.
+            # The scheduler blocks here if the bucket is empty or spacing window is active.
+            wait_s = scheduler.acquire(_estimated_tokens)
+            LAST_API_SLEEP_TIME += wait_s
+
             kwargs: Dict[str, Any] = {
                 "model": MODEL_NAME,
                 "messages": messages,

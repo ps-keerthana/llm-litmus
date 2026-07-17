@@ -66,5 +66,6 @@ SCHEDULER_BUCKET_ID = "groq_default"       # Unique bucket key in SQLite
 SCHEDULER_MAX_RPM: int = 8                  # Max requests per minute (more conservative safety margin)
 SCHEDULER_MAX_TPM: int = 10000              # Max tokens per minute (more conservative safety margin)
 SCHEDULER_ESTIMATED_OUTPUT_TOKENS: int = 256  # Conservative pre-debit for completions
+SCHEDULER_MIN_SPACING_SEC: float = 6.0      # Minimum spacing in seconds between requests to avoid burst limits
 
 

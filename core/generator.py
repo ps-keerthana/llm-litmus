@@ -112,6 +112,8 @@ def call_groq_with_retry(
 
         except RateLimitError as e:
             # Scheduler should prevent this; treat as a last-resort safety net.
+            # Drain the bucket to prevent subsequent calls from firing while we are blocked.
+            scheduler.drain()
             wait = _parse_retry_after(e)
             jitter = wait * 0.1 * (0.5 - (attempt % 2) * 0.5)
             sleep_s = round(wait + jitter, 2)
@@ -122,9 +124,6 @@ def call_groq_with_retry(
             )
             time.sleep(sleep_s)
             LAST_API_SLEEP_TIME += sleep_s
-            # Re-acquire for the retry so the bucket is debited again.
-            wait_s = scheduler.acquire(_estimated_tokens)
-            LAST_API_SLEEP_TIME += wait_s
 
         except Exception as e:
             logger.warning(

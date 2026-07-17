@@ -36,6 +36,7 @@ _config_mod.SCHEDULER_BUCKET_ID = "test_bucket"
 _config_mod.SCHEDULER_MAX_RPM = 5        # Low limit for fast testing
 _config_mod.SCHEDULER_MAX_TPM = 1000
 _config_mod.SCHEDULER_ESTIMATED_OUTPUT_TOKENS = 50
+_config_mod.SCHEDULER_MIN_SPACING_SEC = 0.0
 
 # Import scheduler AFTER patching config so it picks up the test values
 from core import scheduler  # noqa: E402
@@ -230,7 +231,7 @@ class TestSchedulerBucketRefill(unittest.TestCase):
         # Advance time by 60 seconds inside the read path
         original_time = time.time
         with patch("time.time", return_value=original_time() + 61.0):
-            rpm_rem, tpm_rem, _ = scheduler._locked_transaction(scheduler._read_and_refill)
+            rpm_rem, tpm_rem, _, _ = scheduler._locked_transaction(scheduler._read_and_refill)
 
         self.assertGreaterEqual(rpm_rem, float(_config_mod.SCHEDULER_MAX_RPM) - 0.1)
 
@@ -295,6 +296,32 @@ class TestSchedulerDrain(unittest.TestCase):
         
         self.assertEqual(row[0], 0.0)
         self.assertEqual(row[1], 0.0)
+
+
+class TestSchedulerSpacing(unittest.TestCase):
+    def setUp(self):
+        init_db()
+        _reset_bucket()
+
+    def test_spacing_forces_wait(self):
+        """If requests are sent back to back, spacing should force a wait."""
+        # Enable spacing for this test
+        _config_mod.SCHEDULER_MIN_SPACING_SEC = 2.0
+        
+        # First acquire should not wait
+        wait1 = scheduler.acquire(10)
+        self.assertEqual(wait1, 0.0)
+        
+        # Second acquire immediate should wait approx 2.0 seconds
+        start = time.monotonic()
+        wait2 = scheduler.acquire(10)
+        elapsed = time.monotonic() - start
+        
+        self.assertGreaterEqual(wait2, 1.5)
+        self.assertGreaterEqual(elapsed, 1.5)
+        
+        # Reset spacing
+        _config_mod.SCHEDULER_MIN_SPACING_SEC = 0.0
 
 
 if __name__ == "__main__":

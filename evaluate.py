@@ -29,10 +29,13 @@ from core.judge import llm_judge_evaluate
 from core.utils import get_git_sha, get_git_branch, calculate_cost, logger
 from core.attributor import attribute_failure, build_retrieval_diagnosis
 import core.generator as _generator_mod
-
+from db.connection import init_db
 
 
 def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any]:
+    # Initialize the database schema (creates eval_cache, eval_results etc if missing)
+    init_db()
+
     logger.info("Setting up RAG tax knowledge base index...")
     chunks = load_docs()
     logger.info(f"Loaded {len(chunks)} text chunks from documents.")

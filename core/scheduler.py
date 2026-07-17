@@ -60,23 +60,23 @@ def _ensure_bucket(conn: sqlite3.Connection) -> None:
     conn.execute(
         """
         INSERT OR IGNORE INTO rate_limit_buckets
-            (bucket_id, last_refill_time, rpm_remaining, tpm_remaining)
-        VALUES (?, ?, ?, ?);
+            (bucket_id, last_refill_time, rpm_remaining, tpm_remaining, last_request_time)
+        VALUES (?, ?, ?, ?, ?);
         """,
-        (SCHEDULER_BUCKET_ID, time.time(), float(SCHEDULER_MAX_RPM), float(SCHEDULER_MAX_TPM)),
+        (SCHEDULER_BUCKET_ID, time.time(), float(SCHEDULER_MAX_RPM), float(SCHEDULER_MAX_TPM), 0.0),
     )
 
 
-def _read_and_refill(conn: sqlite3.Connection) -> Tuple[float, float, float]:
+def _read_and_refill(conn: sqlite3.Connection) -> Tuple[float, float, float, float]:
     """
     Reads the current bucket row, computes refill based on elapsed time, and
-    returns (rpm_remaining, tpm_remaining, now).
+    returns (rpm_remaining, tpm_remaining, last_request_time, now).
 
     The refilled values are NOT written back here — the caller writes them
     atomically alongside the debit so there is exactly one write per acquire.
     """
     row = conn.execute(
-        "SELECT last_refill_time, rpm_remaining, tpm_remaining "
+        "SELECT last_refill_time, rpm_remaining, tpm_remaining, last_request_time "
         "FROM rate_limit_buckets WHERE bucket_id = ?;",
         (SCHEDULER_BUCKET_ID,),
     ).fetchone()
@@ -85,28 +85,31 @@ def _read_and_refill(conn: sqlite3.Connection) -> Tuple[float, float, float]:
     if row is None:
         # Race: another process inserted between our INSERT OR IGNORE and this
         # SELECT — shouldn't happen inside IMMEDIATE, but handle defensively.
-        return float(SCHEDULER_MAX_RPM), float(SCHEDULER_MAX_TPM), now
+        return float(SCHEDULER_MAX_RPM), float(SCHEDULER_MAX_TPM), 0.0, now
 
-    last_refill, rpm_rem, tpm_rem = row
+    last_refill, rpm_rem, tpm_rem, last_req = row
+    if last_req is None:
+        last_req = 0.0
     elapsed = max(0.0, now - last_refill)
 
     rpm_rem = min(float(SCHEDULER_MAX_RPM), rpm_rem + elapsed * _RPM_PER_SEC)
     tpm_rem = min(float(SCHEDULER_MAX_TPM), tpm_rem + elapsed * _TPM_PER_SEC)
 
-    return rpm_rem, tpm_rem, now
+    return rpm_rem, tpm_rem, last_req, now
 
 
-def _write_bucket(conn: sqlite3.Connection, rpm_rem: float, tpm_rem: float, now: float) -> None:
-    """Persists the updated bucket state. rpm_rem and tpm_rem must already be debited."""
+def _write_bucket(conn: sqlite3.Connection, rpm_rem: float, tpm_rem: float, last_req: float, now: float) -> None:
+    """Persists the updated bucket state."""
     conn.execute(
         """
         UPDATE rate_limit_buckets
            SET last_refill_time = ?,
                rpm_remaining    = ?,
-               tpm_remaining    = ?
+               tpm_remaining    = ?,
+               last_request_time = ?
          WHERE bucket_id = ?;
         """,
-        (now, max(0.0, rpm_rem), max(0.0, tpm_rem), SCHEDULER_BUCKET_ID),
+        (now, max(0.0, rpm_rem), max(0.0, tpm_rem), last_req, SCHEDULER_BUCKET_ID),
     )
 
 
@@ -193,9 +196,9 @@ def refund(estimated_tokens: int, actual_tokens: int) -> None:
         return  # No refund needed
 
     def _do_refund(conn: sqlite3.Connection) -> None:
-        rpm_rem, tpm_rem, now = _read_and_refill(conn)
+        rpm_rem, tpm_rem, last_req, now = _read_and_refill(conn)
         tpm_rem = min(float(SCHEDULER_MAX_TPM), tpm_rem + delta)
-        _write_bucket(conn, rpm_rem, tpm_rem, now)
+        _write_bucket(conn, rpm_rem, tpm_rem, last_req, now)
 
     try:
         _locked_transaction(_do_refund)
@@ -234,10 +237,11 @@ def drain() -> None:
             UPDATE rate_limit_buckets
                SET rpm_remaining  = 0.0,
                    tpm_remaining  = 0.0,
-                   last_refill_time = ?
+                   last_refill_time = ?,
+                   last_request_time = ?
              WHERE bucket_id = ?;
             """,
-            (now, SCHEDULER_BUCKET_ID),
+            (now, now, SCHEDULER_BUCKET_ID),
         )
 
     try:
@@ -255,14 +259,13 @@ def _compute_wait(estimated_total_tokens: int) -> float:
     or 0.0 if capacity is already available.
     Runs inside a BEGIN IMMEDIATE transaction so the read is consistent.
     """
+    from config import SCHEDULER_MIN_SPACING_SEC
     def _check(conn: sqlite3.Connection) -> float:
-        rpm_rem, tpm_rem, _ = _read_and_refill(conn)
-        # Do NOT write anything — this is a read-only check.
-        # Rollback after reading is fine; INSERT OR IGNORE already committed
-        # by _ensure_bucket inside _locked_transaction.
+        rpm_rem, tpm_rem, last_req, now = _read_and_refill(conn)
 
         rpm_wait = 0.0
         tpm_wait = 0.0
+        spacing_wait = 0.0
 
         if rpm_rem < 1.0:
             rpm_wait = (1.0 - rpm_rem) / _RPM_PER_SEC
@@ -270,7 +273,12 @@ def _compute_wait(estimated_total_tokens: int) -> float:
         if tpm_rem < estimated_total_tokens:
             tpm_wait = (estimated_total_tokens - tpm_rem) / _TPM_PER_SEC
 
-        return max(rpm_wait, tpm_wait)
+        if last_req > 0.0:
+            elapsed = now - last_req
+            if elapsed < SCHEDULER_MIN_SPACING_SEC:
+                spacing_wait = SCHEDULER_MIN_SPACING_SEC - elapsed
+
+        return max(rpm_wait, tpm_wait, spacing_wait)
 
     return _locked_transaction(_check)
 
@@ -278,10 +286,10 @@ def _compute_wait(estimated_total_tokens: int) -> float:
 def _debit(estimated_total_tokens: int) -> None:
     """Atomically debits 1 request slot and estimated_total_tokens from the bucket."""
     def _do_debit(conn: sqlite3.Connection) -> None:
-        rpm_rem, tpm_rem, now = _read_and_refill(conn)
+        rpm_rem, tpm_rem, last_req, now = _read_and_refill(conn)
         rpm_rem = max(0.0, rpm_rem - 1.0)
         tpm_rem = max(0.0, tpm_rem - estimated_total_tokens)
-        _write_bucket(conn, rpm_rem, tpm_rem, now)
+        _write_bucket(conn, rpm_rem, tpm_rem, now, now)
 
     _locked_transaction(_do_debit)
 

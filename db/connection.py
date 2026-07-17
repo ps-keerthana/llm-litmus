@@ -124,9 +124,21 @@ def init_db() -> None:
         conn.execute("CREATE INDEX IF NOT EXISTS idx_eval_results_run ON eval_results(run_id);")
         conn.execute("CREATE INDEX IF NOT EXISTS idx_eval_queue_run ON eval_queue(run_id);")
 
-        # Graceful migration for existing databases: add diagnostic_report column if missing
+        # Scheduler: dual token-bucket state shared across all processes
+        conn.execute("""
+            CREATE TABLE IF NOT EXISTS rate_limit_buckets (
+                bucket_id          TEXT PRIMARY KEY,
+                last_refill_time   REAL NOT NULL,     -- Unix wall-clock timestamp
+                rpm_remaining      REAL NOT NULL,     -- Fractional request slots remaining
+                tpm_remaining      REAL NOT NULL      -- Fractional token slots remaining
+            );
+        """)
+
+        # ── Graceful migrations for existing databases ────────────────────────
+        # Each ALTER TABLE is wrapped in try/except; already-present columns are silently ignored.
+
+        # Step 5: diagnostic_report column
         try:
             conn.execute("ALTER TABLE eval_results ADD COLUMN diagnostic_report TEXT;")
         except sqlite3.OperationalError:
-            # Column already exists, ignore
-            pass
+            pass  # Column already exists

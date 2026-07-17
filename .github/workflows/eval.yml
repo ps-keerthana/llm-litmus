@@ -17,6 +17,7 @@ concurrency:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
+    timeout-minutes: 90       # 204 queries @ 12 RPM proactive pacing ≈ 17 min API + overhead
     permissions:
       contents: write
       pull-requests: write
@@ -49,17 +50,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-eval-db-v1-
 
-      - name: Run Evaluation Suite (Smoke Test)
+      - name: Run Full Evaluation Suite (All Queries, No Judge, No Diagnoser)
         env:
           GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
         run: |
-          # Smoke mode: 10 queries (2/category, seed=42), no LLM judge.
-          # Keeps CI fast and within Groq free-tier rate limits.
-          # Full quality gates run nightly via eval_full.yml.
-          python evaluate.py --smoke --no-judge
+          # Full mode: all 204 queries, no LLM judge, no counterfactual diagnoser.
+          # Proactive scheduler (core/scheduler.py) paces requests at 12 RPM / 12 000 TPM
+          # via SQLite token bucket — no reactive 429 waits.
+          # Estimated CI time: ~17 min API time + overhead.
+          python evaluate.py --no-judge --no-diag
 
-      - name: Verify CI Quality Gate (Smoke Mode)
-        run: python ci_gate.py --mode smoke
+      - name: Verify CI Quality Gate (Full Mode)
+        run: python ci_gate.py --mode full
 
       - name: Publish Actions Step Summary
         if: always()

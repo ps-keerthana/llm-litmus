@@ -32,7 +32,7 @@ import core.generator as _generator_mod
 from db.connection import init_db
 
 
-def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any]:
+def run_evaluation(smoke: bool = False, no_judge: bool = False, no_diag: bool = False) -> Dict[str, Any]:
     # Initialize the database schema (creates eval_cache, eval_results etc if missing)
     init_db()
 
@@ -82,6 +82,11 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
             "LLM judge DISABLED (--no-judge). "
             "Scoring via local semantic similarity only — zero additional API calls."
         )
+    if no_diag:
+        logger.info(
+            "Counterfactual diagnoser DISABLED (--no-diag). "
+            "Failed queries will be attributed locally without an extra API call."
+        )
 
     results = []
     passed = 0
@@ -96,12 +101,6 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
     MIN_SEMANTIC_SIM = 0.65
     MIN_LLM_CORRECTNESS = 0.75
     MAX_HALLUCINATION = 0.05
-
-    # Minimum interval between sequential Groq API calls.
-    # Groq free tier: 30 RPM = 2.0s minimum per request.
-    # This prevents rate-limit bursting when all 10 smoke queries
-    # are sent in the same second.
-    MIN_REQUEST_INTERVAL_SEC = 2.1  # slight buffer above 2.0s minimum
 
     for idx, row in enumerate(questions):
         q_id = row["unique_id"]
@@ -138,17 +137,9 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         if _generator_mod.WAS_LAST_CALL_CACHED:
             cached_hits += 1
 
-        # Enforce minimum inter-request interval to stay within RPM limits.
-        # Skip this delay if the call was loaded from cache (no API call made).
-        if not _generator_mod.WAS_LAST_CALL_CACHED:
-            already_waited = _generator_mod.LAST_API_SLEEP_TIME
-            effective_elapsed = elapsed - already_waited
-            remaining_wait = max(0.0, MIN_REQUEST_INTERVAL_SEC - effective_elapsed)
-            if remaining_wait > 0 and idx < len(questions) - 1:  # no need to wait after last query
-                time.sleep(remaining_wait)
-        
-        # Subtract any rate-limiting sleep duration to get the true execution latency
+        # Subtract scheduler sleep from wall-clock to get true generation latency
         latency = round(max(0.0, elapsed - _generator_mod.LAST_API_SLEEP_TIME), 2)
+
 
         # ── 3. Evaluation & LLM Judge Step ────────────────────
         semantic_sim = compute_semantic_similarity(answer, ground_truth)
@@ -235,7 +226,16 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         }
 
         # Run failure attribution & diagnosis
-        failure_category, attribution_reason = attribute_failure(record)
+        if no_diag:
+            # Skip counterfactual Groq call; attribute locally using thresholds only.
+            failure_category = "N/A" if status == "PASS" else "Undiagnosed (--no-diag)"
+            attribution_reason = (
+                "Query passed all quality checks."
+                if status == "PASS"
+                else "Counterfactual diagnoser disabled for this run (use --no-diag=false for full attribution)."
+            )
+        else:
+            failure_category, attribution_reason = attribute_failure(record)
         retrieval_diagnosis = build_retrieval_diagnosis(record)
 
         record["failure_category"] = failure_category
@@ -309,6 +309,7 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False) -> Dict[str, Any
         "failed": failed,
         "mode": "smoke" if smoke else "full",
         "judge_enabled": not no_judge,
+        "diag_enabled": not no_diag,
         "cached_queries_count": cached_hits,
         "cache_hit_rate": cache_hit_rate,
         "evaluation_metadata": {
@@ -369,10 +370,17 @@ if __name__ == "__main__":
         help="Skip the LLM-as-a-judge step (zero extra API calls). "
              "Scoring via local semantic similarity only. Recommended for CI."
     )
+    parser.add_argument(
+        "--no-diag",
+        action="store_true",
+        dest="no_diag",
+        help="Skip the counterfactual diagnoser for failed queries (eliminates one extra "
+             "API call per failure). Recommended for CI full-mode runs."
+    )
     args = parser.parse_args()
 
     try:
-        run_evaluation(smoke=args.smoke, no_judge=args.no_judge)
+        run_evaluation(smoke=args.smoke, no_judge=args.no_judge, no_diag=args.no_diag)
     except Exception as exc:
         logger.error(f"Fatal error in evaluation runner: {exc}")
         exit(1)

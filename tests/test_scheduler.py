@@ -276,5 +276,27 @@ class TestSchedulerConcurrency(unittest.TestCase):
         self.assertGreaterEqual(row[1], 0.0)
 
 
+class TestSchedulerDrain(unittest.TestCase):
+    def setUp(self):
+        init_db()
+        _reset_bucket()
+
+    def test_drain_sets_rem_to_zero(self):
+        """drain() should set remaining tokens and requests to 0."""
+        scheduler.acquire(100) # Ensure row exists and has some remaining
+        scheduler.drain()
+        
+        conn = sqlite3.connect(_config_mod.DB_PATH)
+        row = conn.execute(
+            "SELECT rpm_remaining, tpm_remaining FROM rate_limit_buckets WHERE bucket_id=?;",
+            (_config_mod.SCHEDULER_BUCKET_ID,),
+        ).fetchone()
+        conn.close()
+        
+        self.assertEqual(row[0], 0.0)
+        self.assertEqual(row[1], 0.0)
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
+

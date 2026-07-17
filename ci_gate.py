@@ -123,10 +123,11 @@ def main() -> None:
         if latest_p95 > 4.0:
             failures.append(f"p95 latency {latest_p95:.2f}s exceeds smoke threshold 4.0s")
             
-        # 3. Check minimum questions processed
+        # 3. Check minimum questions processed (smoke = 10, full = 100+ expected)
         results = latest.get("results", [])
-        if len(results) < 10:
-            failures.append(f"Total questions evaluated ({len(results)}) is less than smoke threshold of 10")
+        min_expected = 10 if latest.get("mode") == "smoke" else 100
+        if len(results) < min_expected:
+            failures.append(f"Total questions evaluated ({len(results)}) is less than threshold ({min_expected})")
             
         # 4. Check for API/Connection errors or 429 rate limit errors
         for r in results:

@@ -2,16 +2,18 @@
 Core Generator Module
 Interfaces with the Groq API to generate answers based on context,
 implementing robust retries, token usage logging, and cost analysis.
+
+Rate limiting is handled externally by core/scheduler.py which uses a
+SQLite-backed dual token bucket shared across all processes.
 """
 
 import os
 import time
-import threading
-import collections
 import logging
-from typing import List, Tuple, Dict, Any, Optional, Deque
+from typing import List, Tuple, Dict, Any, Optional
 from groq import Groq
 from config import MODEL_NAME
+from core import scheduler
 
 logger = logging.getLogger(__name__)
 
@@ -24,41 +26,6 @@ WAS_LAST_CALL_CACHED: bool = False
 # the full retry policy with proper Retry-After header handling.
 _groq_client: Optional[Groq] = None
 
-# Groq free tier: 15 RPM for llama-3.3-70b-versatile.
-# We self-limit to 10 RPM to stay safely under both RPM and TPM (14,400 token) caps.
-_RATE_LIMIT_RPM: int = 10
-_rate_lock = threading.Lock()
-_request_timestamps: Deque[float] = collections.deque()
-
-
-def _throttle() -> None:
-    """
-    Proactive sliding-window rate limiter.
-    Blocks until we are safely below the RPM cap before firing
-    an API call. Adds sleep time to LAST_API_SLEEP_TIME so latency
-    accounting stays accurate.
-    """
-    global LAST_API_SLEEP_TIME
-    window = 60.0
-    with _rate_lock:
-        now = time.monotonic()
-        # Drop timestamps older than the sliding window
-        while _request_timestamps and now - _request_timestamps[0] >= window:
-            _request_timestamps.popleft()
-
-        if len(_request_timestamps) >= _RATE_LIMIT_RPM:
-            # Wait until the oldest request falls outside the window
-            oldest = _request_timestamps[0]
-            wait_s = round(window - (now - oldest) + 0.05, 3)  # tiny buffer
-            if wait_s > 0:
-                logger.info(
-                    f"[Rate Limiter] {len(_request_timestamps)}/{_RATE_LIMIT_RPM} RPM used — "
-                    f"sleeping {wait_s:.1f}s to stay under Groq quota..."
-                )
-                time.sleep(wait_s)
-                LAST_API_SLEEP_TIME += wait_s
-
-        _request_timestamps.append(time.monotonic())
 
 
 def _get_groq_client() -> Groq:
@@ -102,23 +69,36 @@ def call_groq_with_retry(
     messages: List[Dict[str, str]],
     response_format: Optional[Dict[str, str]] = None,
     temperature: float = 0.0,
-    max_retries: int = 8
+    max_retries: int = 8,
+    _estimated_tokens: int = 0,
 ) -> Any:
     """
-    Executes Groq API chat completions with proper rate-limit handling:
-    - Honors the Retry-After header for the exact sleep duration
-    - Exponential backoff with jitter for non-rate-limit errors
-    - Tracks cumulative sleep time in LAST_API_SLEEP_TIME for latency correction
+    Executes Groq API chat completions with proactive rate scheduling and
+    robust fallback retry handling:
+    - Blocks proactively via scheduler.acquire() before the first attempt.
+    - Honors the Retry-After header for the exact sleep duration on 429s.
+    - Exponential backoff with jitter for non-rate-limit errors.
+    - Tracks cumulative sleep time in LAST_API_SLEEP_TIME for latency correction.
+
+    Parameters
+    ----------
+    _estimated_tokens : int
+        Caller-supplied prompt token estimate for the scheduler. If 0 the
+        scheduler uses its own conservative default.
     """
     global LAST_API_SLEEP_TIME
     from groq import RateLimitError
+    from config import SCHEDULER_ESTIMATED_OUTPUT_TOKENS
+
+    # Proactively acquire capacity ONCE before attempting the call.
+    # The scheduler blocks here if the bucket is empty.
+    wait_s = scheduler.acquire(_estimated_tokens)
+    LAST_API_SLEEP_TIME += wait_s
 
     backoff = 2.0
+    response = None
     for attempt in range(max_retries):
         try:
-            # Proactively throttle before each attempt to stay under RPM cap
-            _throttle()
-
             kwargs: Dict[str, Any] = {
                 "model": MODEL_NAME,
                 "messages": messages,
@@ -131,27 +111,33 @@ def call_groq_with_retry(
             return response
 
         except RateLimitError as e:
+            # Scheduler should prevent this; treat as a last-resort safety net.
             wait = _parse_retry_after(e)
-            # Add small jitter (±10%) to prevent thundering herd in parallel CI jobs
             jitter = wait * 0.1 * (0.5 - (attempt % 2) * 0.5)
             sleep_s = round(wait + jitter, 2)
             logger.info(
-                f"[Rate Limit] 429 received (attempt {attempt + 1}/{max_retries}). "
-                f"Groq says wait {wait:.0f}s — sleeping {sleep_s:.1f}s then retrying automatically..."
+                "[Rate Limit] 429 received (attempt %d/%d). "
+                "Groq says wait %.0fs — sleeping %.1fs then retrying...",
+                attempt + 1, max_retries, wait, sleep_s,
             )
             time.sleep(sleep_s)
             LAST_API_SLEEP_TIME += sleep_s
+            # Re-acquire for the retry so the bucket is debited again.
+            wait_s = scheduler.acquire(_estimated_tokens)
+            LAST_API_SLEEP_TIME += wait_s
 
         except Exception as e:
-            logger.warning(f"[API Error] Groq call failed (attempt {attempt + 1}/{max_retries}): {e}")
+            logger.warning(
+                "[API Error] Groq call failed (attempt %d/%d): %s",
+                attempt + 1, max_retries, e,
+            )
             if attempt == max_retries - 1:
                 raise
-            # Exponential backoff with jitter for transient errors (network, timeout)
             jitter = backoff * 0.2 * (0.5 - (attempt % 2))
             sleep_s = round(backoff + jitter, 2)
             time.sleep(sleep_s)
             LAST_API_SLEEP_TIME += sleep_s
-            backoff = min(backoff * 2.0, 60.0)  # cap at 60s
+            backoff = min(backoff * 2.0, 60.0)
 
     return None
 
@@ -197,6 +183,7 @@ Answer:"""
 
     # Check cache first to bypass Groq limits and reduce query overhead
     from core.cache import get_cache_key, lookup_cache, update_cache
+    from config import SCHEDULER_ESTIMATED_OUTPUT_TOKENS
     cache_key = get_cache_key(MODEL_NAME, prompt, temperature)
     cached = lookup_cache(cache_key)
     if cached is not None:
@@ -207,10 +194,16 @@ Answer:"""
             cached["completion_tokens"]
         )
 
+    # Conservative token estimate: 1 token ≈ 3 bytes of UTF-8 text.
+    # The scheduler will refund the difference after the actual count arrives.
+    estimated_prompt_tokens = max(1, len(prompt.encode("utf-8")) // 3)
+    estimated_total = estimated_prompt_tokens + SCHEDULER_ESTIMATED_OUTPUT_TOKENS
+
     try:
         response = call_groq_with_retry(
             messages=[{"role": "user", "content": prompt}],
             temperature=temperature,
+            _estimated_tokens=estimated_prompt_tokens,
         )
         if response is None:
             raise ValueError("Groq API returned None after all retries.")
@@ -219,18 +212,26 @@ Answer:"""
         usage = getattr(response, "usage", None)
         prompt_tokens = usage.prompt_tokens if usage else 0
         completion_tokens = usage.completion_tokens if usage else 0
-        
+        actual_total = prompt_tokens + completion_tokens
+
+        # Return over-estimated tokens to the bucket.
+        scheduler.refund(estimated_total, actual_total)
+        logger.info(
+            "[SCHEDULER] actual_tokens=%d  estimated_tokens=%d  refund=%d",
+            actual_total, estimated_total, max(0, estimated_total - actual_total),
+        )
+
         # Save to cache
         update_cache(cache_key, {
             "answer": answer,
             "prompt_tokens": prompt_tokens,
             "completion_tokens": completion_tokens
         })
-        
+
         return answer, prompt_tokens, completion_tokens
 
     except Exception as e:
-        print(f"  [Error] Failed to generate answer: {e}")
+        logger.error("[Generator] Failed to generate answer: %s", e)
         return "I don't have information about that. (Error: LLM generation failed)", 0, 0
 
 

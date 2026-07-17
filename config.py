@@ -63,8 +63,8 @@ ORACLE_AUTO_FAIL_THRESHOLD = 0.25
 # These values are read by core/scheduler.py — change here to tune without
 # touching any other module.
 SCHEDULER_BUCKET_ID = "groq_default"       # Unique bucket key in SQLite
-SCHEDULER_MAX_RPM: int = 12                 # Max requests per minute (80% of 15)
-SCHEDULER_MAX_TPM: int = 12000              # Max tokens per minute  (83% of 14,400)
+SCHEDULER_MAX_RPM: int = 8                  # Max requests per minute (more conservative safety margin)
+SCHEDULER_MAX_TPM: int = 10000              # Max tokens per minute (more conservative safety margin)
 SCHEDULER_ESTIMATED_OUTPUT_TOKENS: int = 256  # Conservative pre-debit for completions
 
 

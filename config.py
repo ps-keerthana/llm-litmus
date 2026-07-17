@@ -57,4 +57,14 @@ DB_PATH = "eval_platform.db"
 ORACLE_AUTO_PASS_THRESHOLD = 0.85
 ORACLE_AUTO_FAIL_THRESHOLD = 0.25
 
+# ── Proactive Request Scheduler ──────────────────────────
+# Groq free-tier limits for llama-3.3-70b-versatile: 15 RPM, 14,400 TPM.
+# Safety margins applied: 80% of RPM, 83% of TPM.
+# These values are read by core/scheduler.py — change here to tune without
+# touching any other module.
+SCHEDULER_BUCKET_ID = "groq_default"       # Unique bucket key in SQLite
+SCHEDULER_MAX_RPM: int = 12                 # Max requests per minute (80% of 15)
+SCHEDULER_MAX_TPM: int = 12000              # Max tokens per minute  (83% of 14,400)
+SCHEDULER_ESTIMATED_OUTPUT_TOKENS: int = 256  # Conservative pre-debit for completions
+
 

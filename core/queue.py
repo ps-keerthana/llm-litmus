@@ -278,9 +278,10 @@ def process_queue(run_id: str, no_judge: bool = False) -> Dict[str, Any]:
                         retrieved_sources, retrieved_chunks, retrieved_similarities, semantic_similarity,
                         correctness, faithfulness, completeness, hallucination_rate, judge_confidence, judge_reasoning,
                         hit_rate, mrr, context_precision, context_recall, latency_sec, cost_usd, status,
-                        failure_category, attribution_reason, retrieval_diagnosis, judge_enabled, cached, prompt_used
+                        failure_category, attribution_reason, retrieval_diagnosis, judge_enabled, cached, prompt_used,
+                        diagnostic_report
                     ) VALUES (
-                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
+                        ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?
                     );
                     """,
                     (
@@ -290,7 +291,8 @@ def process_queue(run_id: str, no_judge: bool = False) -> Dict[str, Any]:
                         record["judge_confidence"], record["judge_reasoning"], record["hit_rate"], record["mrr"],
                         record["context_precision"], record["context_recall"], latency, cost, status,
                         failure_category, attribution_reason, json.dumps(retrieval_diagnosis),
-                        1 if not no_judge else 0, 1 if record["cached"] else 0, record["prompt_used"]
+                        1 if not no_judge else 0, 1 if record["cached"] else 0, record["prompt_used"],
+                        json.dumps(record.get("diagnostic_report"))
                     )
                 )
 

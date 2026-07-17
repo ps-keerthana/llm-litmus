@@ -24,11 +24,9 @@ WAS_LAST_CALL_CACHED: bool = False
 # the full retry policy with proper Retry-After header handling.
 _groq_client: Optional[Groq] = None
 
-# ── Proactive sliding-window rate limiter ───────────────────
-# Groq free tier: 30 RPM for llama-3.3-70b-versatile.
-# We self-limit to 25 RPM (83% of limit) so we never hit 429
-# proactively — no reactive waits, no 60s penalty pauses.
-_RATE_LIMIT_RPM: int = 25
+# Groq free tier: 15 RPM for llama-3.3-70b-versatile.
+# We self-limit to 10 RPM to stay safely under both RPM and TPM (14,400 token) caps.
+_RATE_LIMIT_RPM: int = 10
 _rate_lock = threading.Lock()
 _request_timestamps: Deque[float] = collections.deque()
 

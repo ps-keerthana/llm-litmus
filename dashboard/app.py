@@ -3,6 +3,7 @@ import json
 import glob
 import os
 import time
+import urllib.request as _urllib_req
 import pandas as pd
 import numpy as np
 import plotly.express as px
@@ -122,13 +123,55 @@ def normalize_run_data(run: dict) -> dict:
     return run
 
 
+# ── FastAPI Backend Connection ─────────────────────────────
+# Point to the running api/app.py service. Override via env var for staging.
+API_BASE_URL = os.getenv("EVAL_API_URL", "http://127.0.0.1:8000")
+
+
+def _api_get(path: str, timeout: int = 4):
+    """Call the FastAPI backend. Returns parsed JSON dict/list or None on error."""
+    try:
+        with _urllib_req.urlopen(f"{API_BASE_URL}{path}", timeout=timeout) as r:
+            return json.loads(r.read())
+    except Exception:
+        return None
+
+
+def _api_connected() -> bool:
+    """Lightweight probe to check if the API is reachable."""
+    return _api_get("/health") is not None
+
+
 # ── Load Runs & History ────────────────────────────────────
 @st.cache_data(ttl=5)
 def load_all_runs():
+    """
+    Primary path: fetch run list from FastAPI (GET /runs then GET /runs/{run_id}).
+    Fallback: read eval_results/*.json files directly (API not running).
+    """
+    summaries = _api_get("/runs")
+    if summaries is not None:
+        runs = []
+        for summary in reversed(summaries):  # oldest first (API returns newest-first)
+            detail = _api_get(f"/runs/{summary['run_id']}")
+            if not detail:
+                continue
+            # Flatten stored metadata blob to top level so normalize_run_data() works
+            run_data = dict(detail.get("metadata") or {})
+            run_data.update({
+                "run_id": detail["run_id"],
+                "status": detail["status"],
+                "mode": detail["mode"],
+                "commit_sha": detail.get("commit_sha"),
+                "results": detail.get("results", []),
+            })
+            runs.append(normalize_run_data(run_data))
+        return runs
+
+    # ── Filesystem fallback ──────────────────────────────────
     files = sorted(glob.glob(os.path.join("..", config.EVAL_RESULTS_DIR, "run_*.json")))
     if not files:
         files = sorted(glob.glob(os.path.join(config.EVAL_RESULTS_DIR, "run_*.json")))
-        
     runs = []
     for f in files:
         try:
@@ -142,6 +185,15 @@ def load_all_runs():
 
 @st.cache_data(ttl=5)
 def load_history_log():
+    """
+    Primary path: fetch history from FastAPI (GET /history).
+    Fallback: read metrics_history.json directly.
+    """
+    history_raw = _api_get("/history")
+    if history_raw is not None:
+        return [normalize_run_data(r) for r in history_raw]
+
+    # ── Filesystem fallback ──────────────────────────────────
     p = os.path.join("..", config.METRICS_HISTORY_PATH)
     if not os.path.exists(p):
         p = config.METRICS_HISTORY_PATH
@@ -149,19 +201,13 @@ def load_history_log():
         try:
             with open(p, "r", encoding="utf-8") as f:
                 history = json.load(f)
-            
-            # Map old metrics names to modern schema names
-            normalized_history = []
-            for r in history:
-                r = normalize_run_data(r)
-                normalized_history.append(r)
-            return normalized_history
+            return [normalize_run_data(r) for r in history]
         except Exception:
             return []
     return []
 
 
-runs = load_all_runs()
+runs = [r for r in load_all_runs() if r.get("status") == "completed"]
 history = load_history_log()
 
 # Sidebar Setup
@@ -185,6 +231,19 @@ st.sidebar.divider()
 st.sidebar.markdown(f"**Dataset Version:** `{config.VERSION_DATASET}`")
 st.sidebar.markdown(f"**Retriever:** `{config.VERSION_RETRIEVER}`")
 st.sidebar.markdown(f"**LLM Grader:** `{config.VERSION_LLM}`")
+
+# API connection status badge
+_connected = _api_connected()
+if _connected:
+    st.sidebar.markdown(
+        "<span style='color:#4ade80;font-size:12px;'>● API connected</span>",
+        unsafe_allow_html=True,
+    )
+else:
+    st.sidebar.markdown(
+        "<span style='color:#f87171;font-size:12px;'>● API offline — reading from files</span>",
+        unsafe_allow_html=True,
+    )
 
 if not runs:
     st.warning("No evaluation runs found. Run `python evaluate.py` first.")

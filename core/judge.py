@@ -60,11 +60,15 @@ Provide your evaluation as a JSON object with these exact keys:
 
 Return ONLY a valid JSON object. Do not include markdown formatting or wrapping."""
 
-    # Check cache first to bypass Groq rate limits for identical outputs
+    # Check cache first to bypass provider calls for identical outputs
     from core.cache import get_cache_key, lookup_cache, update_cache
-    from config import MODEL_NAME
+    from core.providers import get_provider_client
+
+    provider = get_provider_client()
+    model_name = provider.get_model_name()
+
     cache_payload = f"JUDGE|{question}|{answer}|{ground_truth}|{context}"
-    cache_key = get_cache_key(f"judge-{MODEL_NAME}", cache_payload, 0.0)
+    cache_key = get_cache_key(f"judge-{model_name}", cache_payload, 0.0)
     cached = lookup_cache(cache_key)
     if cached is not None:
         return (
@@ -74,16 +78,13 @@ Return ONLY a valid JSON object. Do not include markdown formatting or wrapping.
         )
 
     try:
-        response = call_groq_with_retry(
+        result = provider.complete(
             messages=[{"role": "user", "content": prompt}],
             response_format={"type": "json_object"},
             temperature=0.0
         )
-        if response is None:
-            raise ValueError("Groq API returned None for judge evaluation.")
-            
-        data = json.loads(response.choices[0].message.content.strip())
-        usage = getattr(response, "usage", None)
+
+        data = json.loads(result.text.strip())
         
         metrics = {
             "correctness": float(data.get("correctness", 0.0)),
@@ -94,8 +95,8 @@ Return ONLY a valid JSON object. Do not include markdown formatting or wrapping.
             "reasoning": data.get("reasoning", "Grading succeeded.")
         }
         
-        prompt_tokens = usage.prompt_tokens if usage else 0
-        completion_tokens = usage.completion_tokens if usage else 0
+        prompt_tokens = result.prompt_tokens
+        completion_tokens = result.completion_tokens
         
         # Save to cache
         update_cache(cache_key, {

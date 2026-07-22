@@ -17,6 +17,7 @@ from datetime import datetime
 from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 
+import config
 from config import (
     DATASET_PATH, EVAL_RESULTS_DIR,
     VERSION_DATASET, VERSION_PROMPT, VERSION_RETRIEVER, VERSION_EMBEDDING, VERSION_LLM,

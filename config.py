@@ -11,7 +11,14 @@ EVAL_RESULTS_DIR = "eval_results"
 METRICS_HISTORY_PATH = "metrics_history.json"
 
 # ── Model & API Settings ──────────────────────────────────
-MODEL_NAME = "llama-3.3-70b-versatile"
+import os
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")  # Options: "groq", "ollama", "openai", "anthropic"
+OLLAMA_API_URL = os.getenv("OLLAMA_API_URL", "http://localhost:11434/v1")
+OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.2:1b")
+OPENAI_MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
+ANTHROPIC_MODEL_NAME = os.getenv("ANTHROPIC_MODEL_NAME", "claude-3-5-haiku-20241022")
+
+MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Groq pricing details per 1 million tokens (USD)

@@ -17,7 +17,7 @@ concurrency:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    timeout-minutes: 90       # 204 queries @ 12 RPM proactive pacing ≈ 17 min API + overhead
+    timeout-minutes: 15       # Smoke run using Ollama completes in under 3 minutes
     permissions:
       contents: write
       pull-requests: write
@@ -50,18 +50,21 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-eval-db-v1-
 
-      - name: Run Full Evaluation Suite (All Queries, No Judge, No Diagnoser)
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      - name: Start Ollama Service
         run: |
-          # Full mode: all 204 queries, no LLM judge, no counterfactual diagnoser.
-          # Proactive scheduler (core/scheduler.py) paces requests at 12 RPM / 12 000 TPM
-          # via SQLite token bucket — no reactive 429 waits.
-          # Estimated CI time: ~17 min API time + overhead.
-          python evaluate.py --no-judge --no-diag
+          docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+          sleep 5
+          docker exec ollama ollama pull llama3.2:1b
 
-      - name: Verify CI Quality Gate (Full Mode)
-        run: python ci_gate.py --mode full
+      - name: Run Smoke Evaluation Suite (Ollama Local, No Judge)
+        run: |
+          # Run smoke mode: 10 queries (2/category, seed=42)
+          # Powered by local Ollama llama3.2:1b model inside GitHub Actions runner
+          # Bypasses Groq completely to avoid rate limits on pull requests.
+          python evaluate.py --smoke --provider ollama --no-judge --no-diag
+
+      - name: Verify CI Quality Gate (Smoke Mode)
+        run: python ci_gate.py --mode smoke
 
       - name: Publish Actions Step Summary
         if: always()

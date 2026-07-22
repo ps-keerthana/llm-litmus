@@ -14,7 +14,7 @@ import time
 import argparse
 import random
 from datetime import datetime
-from typing import Dict, Any
+from typing import Dict, Any, Optional, Tuple, List
 import numpy as np
 
 from config import (
@@ -29,6 +29,7 @@ from core.judge import llm_judge_evaluate
 from core.utils import get_git_sha, get_git_branch, calculate_cost, logger
 from core.attributor import attribute_failure, build_retrieval_diagnosis
 import core.generator as _generator_mod
+from db.connection import init_db
 from core.providers import get_provider_client
 
 

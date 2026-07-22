@@ -42,14 +42,18 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-eval-db-v1-
 
-      - name: Run Full Evaluation (All golden questions, LLM judge enabled, no diagnoser)
-        env:
-          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+      - name: Start Ollama Service
         run: |
-          # Full mode: all 204 queries, LLM judge ON for faithfulness/hallucination,
-          # counterfactual diagnoser OFF to prevent post-failure API bursts.
-          # Proactive scheduler paces at 12 RPM / 12,000 TPM — no reactive 429 waits.
-          python evaluate.py --no-diag
+          docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
+          sleep 5
+          docker exec ollama ollama pull llama3.2:1b
+
+      - name: Run Full Evaluation (All golden questions, Ollama Local, No Judge)
+        run: |
+          # Full mode: all 204 queries
+          # Powered by local Ollama llama3.2:1b model inside GitHub Actions runner
+          # Bypasses Groq completely to avoid daily token rate limits.
+          python evaluate.py --provider ollama --no-judge --no-diag
 
       - name: Verify Quality Gate (Full Mode & Regressions)
         run: python ci_gate.py --mode full

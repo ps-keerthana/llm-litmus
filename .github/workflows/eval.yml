@@ -17,7 +17,7 @@ concurrency:
 jobs:
   evaluate:
     runs-on: ubuntu-latest
-    timeout-minutes: 15       # Smoke run using Ollama completes in under 3 minutes
+    timeout-minutes: 120      # Full evaluation suite (204 queries) on CPU runner takes up to 90-100 minutes
     permissions:
       contents: write
       pull-requests: write
@@ -56,15 +56,15 @@ jobs:
           sleep 5
           docker exec ollama ollama pull llama3.2:1b
 
-      - name: Run Smoke Evaluation Suite (Ollama Local, No Judge)
+      - name: Run Full Evaluation Suite (Ollama Local, No Judge)
         run: |
-          # Run smoke mode: 10 queries (2/category, seed=42)
+          # Run full mode: all 204 queries
           # Powered by local Ollama llama3.2:1b model inside GitHub Actions runner
           # Bypasses Groq completely to avoid rate limits on pull requests.
-          python evaluate.py --smoke --provider ollama --no-judge --no-diag
+          python evaluate.py --provider ollama --no-judge --no-diag
 
-      - name: Verify CI Quality Gate (Smoke Mode)
-        run: python ci_gate.py --mode smoke
+      - name: Verify CI Quality Gate (Full Mode)
+        run: python ci_gate.py --mode full
 
       - name: Publish Actions Step Summary
         if: always()

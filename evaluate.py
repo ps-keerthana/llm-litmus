@@ -29,12 +29,23 @@ from core.judge import llm_judge_evaluate
 from core.utils import get_git_sha, get_git_branch, calculate_cost, logger
 from core.attributor import attribute_failure, build_retrieval_diagnosis
 import core.generator as _generator_mod
-from db.connection import init_db
+from core.providers import get_provider_client
 
 
-def run_evaluation(smoke: bool = False, no_judge: bool = False, no_diag: bool = False) -> Dict[str, Any]:
+def run_evaluation(
+    smoke: bool = False,
+    no_judge: bool = False,
+    no_diag: bool = False,
+    provider: Optional[str] = None,
+) -> Dict[str, Any]:
     # Initialize the database schema (creates eval_cache, eval_results etc if missing)
     init_db()
+
+    provider_client = get_provider_client(provider)
+    active_provider_name = provider if provider else config.LLM_PROVIDER
+    active_model_name = provider_client.get_model_name()
+
+    logger.info("Using LLM Provider: '%s' (Model: '%s')", active_provider_name, active_model_name)
 
     logger.info("Setting up RAG tax knowledge base index...")
     chunks = load_docs()
@@ -287,7 +298,8 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False, no_diag: bool = 
         "prompt_version": VERSION_PROMPT,
         "retriever_version": VERSION_RETRIEVER,
         "embedding_model": VERSION_EMBEDDING,
-        "llm_model": VERSION_LLM,
+        "llm_model": active_model_name,
+        "provider": active_provider_name,
         "pass_rate": round(passed / len(questions) * 100, 1) if questions else 0.0,
         "hallucination_rate_avg": avg_hall,
         "avg_faithfulness": avg_faith,
@@ -316,7 +328,8 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False, no_diag: bool = 
             "git_commit": commit_sha,
             "evaluation_timestamp": timestamp,
             "run_mode": "smoke" if smoke else "full",
-            "model_name": VERSION_LLM,
+            "provider": active_provider_name,
+            "model_name": active_model_name,
             "prompt_version": VERSION_PROMPT,
             "dataset_version": VERSION_DATASET,
             "embedding_model": VERSION_EMBEDDING,
@@ -345,6 +358,7 @@ def run_evaluation(smoke: bool = False, no_judge: bool = False, no_diag: bool = 
     logger.info("=" * 60)
     logger.info("EVALUATION PIPELINE COMPLETED")
     logger.info(f"Mode:               {summary_entry['mode'].upper()}")
+    logger.info(f"Provider / Model:   {active_provider_name.upper()} / {active_model_name}")
     logger.info(f"Pass Rate:          {summary_entry['pass_rate']}% ({passed}/{len(questions)})")
     logger.info(f"Retrieval Hit Rate: {round(avg_hit * 100, 1)}%")
     logger.info(f"Avg Faithfulness:   {avg_faith} (Hallucination: {avg_hall})")
@@ -377,10 +391,21 @@ if __name__ == "__main__":
         help="Skip the counterfactual diagnoser for failed queries (eliminates one extra "
              "API call per failure). Recommended for CI full-mode runs."
     )
+    parser.add_argument(
+        "--provider",
+        type=str,
+        default=None,
+        help="LLM inference provider ('groq', 'ollama', 'openai', 'anthropic'). Defaults to config.LLM_PROVIDER."
+    )
     args = parser.parse_args()
 
     try:
-        run_evaluation(smoke=args.smoke, no_judge=args.no_judge, no_diag=args.no_diag)
+        run_evaluation(
+            smoke=args.smoke,
+            no_judge=args.no_judge,
+            no_diag=args.no_diag,
+            provider=args.provider,
+        )
     except Exception as exc:
         logger.error(f"Fatal error in evaluation runner: {exc}")
         exit(1)

@@ -42,11 +42,26 @@ jobs:
           restore-keys: |
             ${{ runner.os }}-eval-db-v1-
 
-      - name: Start Ollama Service
+      - name: Start Ollama Service and Pull Model
         run: |
           docker run -d -v ollama:/root/.ollama -p 11434:11434 --name ollama ollama/ollama
-          sleep 5
+
+          # Wait until Ollama API is reachable (up to 60 seconds)
+          echo "Waiting for Ollama service to be ready..."
+          for i in $(seq 1 30); do
+            if curl -sf http://localhost:11434/api/tags > /dev/null 2>&1; then
+              echo "Ollama is ready after ${i}s"
+              break
+            fi
+            sleep 2
+          done
+
+          # Pull the model (cached in volume on subsequent runs)
           docker exec ollama ollama pull llama3.2:1b
+
+          # Confirm model is available before running eval
+          echo "Verifying model is listed..."
+          curl -s http://localhost:11434/api/tags | python3 -c "import sys,json; tags=json.load(sys.stdin)['models']; print([m['name'] for m in tags])"
 
       - name: Run Full Evaluation (All golden questions, Ollama Local, No Judge)
         run: |

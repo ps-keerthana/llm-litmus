@@ -150,6 +150,7 @@ class RunDetail(BaseModel):
 class EnqueueRequest(BaseModel):
     mode: str = "smoke"
     no_judge: bool = True
+    provider: Optional[str] = None  # 'groq' | 'ollama' | 'openai' | 'anthropic'; None = config default
 
 
 class EnqueueResponse(BaseModel):
@@ -453,7 +454,7 @@ def enqueue_run_endpoint(
         raise HTTPException(status_code=500, detail=str(exc))
 
     # Run the worker in a background task so the HTTP response returns immediately.
-    background_tasks.add_task(process_queue, run_id, request.no_judge)
+    background_tasks.add_task(process_queue, run_id, request.no_judge, request.provider)
 
     return EnqueueResponse(
         run_id=run_id,

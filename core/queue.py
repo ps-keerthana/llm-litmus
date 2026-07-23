@@ -5,7 +5,7 @@ import time
 import random
 import numpy as np
 from datetime import datetime
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Optional
 
 from config import (
     DATASET_PATH, EVAL_RESULTS_DIR,
@@ -92,10 +92,16 @@ def enqueue_run(mode: str) -> str:
     return run_id
 
 
-def process_queue(run_id: str, no_judge: bool = False) -> Dict[str, Any]:
+def process_queue(run_id: str, no_judge: bool = False, provider: Optional[str] = None) -> Dict[str, Any]:
     """
     Background worker loop that fetches and executes pending queue tasks for a run.
     Re-runs RAG pipeline logic, records outputs/metrics, and updates database state.
+
+    Args:
+        run_id:   The run identifier to process.
+        no_judge: If True, skips the LLM-as-a-judge scoring step.
+        provider: LLM provider override ('groq', 'ollama', 'openai', 'anthropic').
+                  Defaults to config.LLM_PROVIDER when None.
     """
     # 1. Fetch pending items
     conn = get_db_connection()
@@ -175,7 +181,7 @@ def process_queue(run_id: str, no_judge: bool = False) -> Dict[str, Any]:
 
             # ── 2. Generation Step ───────────────────────────────
             gen_start = time.time()
-            answer, gen_p, gen_c = generate_answer(question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE)
+            answer, gen_p, gen_c = generate_answer(question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE, provider_name=provider)
             elapsed = time.time() - gen_start
 
             if _generator_mod.WAS_LAST_CALL_CACHED:

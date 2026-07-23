@@ -214,7 +214,8 @@ def process_queue(run_id: str, no_judge: bool = False, provider: Optional[str] =
                 context_chunks=retrieved_chunks,
                 semantic_sim=semantic_sim,
                 no_judge=no_judge,
-                is_refusal=is_refusal
+                is_refusal=is_refusal,
+                provider=provider,
             )
 
             total_p = gen_p + judge_p

@@ -6,7 +6,7 @@ Implements oracle-efficient routing to bypass judge calls when similarity is una
 """
 
 import json
-from typing import List, Dict, Any, Tuple
+from typing import List, Dict, Any, Tuple, Optional
 from core.generator import call_groq_with_retry
 from config import ORACLE_AUTO_PASS_THRESHOLD, ORACLE_AUTO_FAIL_THRESHOLD
 
@@ -14,7 +14,8 @@ def llm_judge_evaluate(
     question: str,
     answer: str,
     ground_truth: str,
-    context_chunks: List[str]
+    context_chunks: List[str],
+    provider: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], int, int]:
     """
     Grades RAG generation quality using LLM-as-a-judge.
@@ -64,7 +65,7 @@ Return ONLY a valid JSON object. Do not include markdown formatting or wrapping.
     from core.cache import get_cache_key, lookup_cache, update_cache
     from core.providers import get_provider_client
 
-    provider = get_provider_client()
+    provider = get_provider_client(provider)
     model_name = provider.get_model_name()
 
     cache_payload = f"JUDGE|{question}|{answer}|{ground_truth}|{context}"
@@ -127,7 +128,8 @@ def evaluate_with_oracle_routing(
     context_chunks: List[str],
     semantic_sim: float,
     no_judge: bool = False,
-    is_refusal: bool = False
+    is_refusal: bool = False,
+    provider: Optional[str] = None,
 ) -> Tuple[Dict[str, Any], int, int, bool]:
     """
     Evaluates answer quality, using oracle-efficient routing to bypass expensive
@@ -187,6 +189,6 @@ def evaluate_with_oracle_routing(
 
     # Case 5: Ambiguous region -> call the LLM judge
     metrics, p_tokens, c_tokens = llm_judge_evaluate(
-        question, answer, ground_truth, context_chunks
+        question, answer, ground_truth, context_chunks, provider=provider
     )
     return metrics, p_tokens, c_tokens, True

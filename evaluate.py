@@ -144,7 +144,10 @@ def run_evaluation(
 
         # ── 2. Generation Step ───────────────────────────────
         gen_start = time.time()
-        answer, gen_p, gen_c = generate_answer(question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE)
+        answer, gen_p, gen_c = generate_answer(
+            question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE,
+            provider_name=provider,
+        )
         elapsed = time.time() - gen_start
 
         if _generator_mod.WAS_LAST_CALL_CACHED:
@@ -179,7 +182,8 @@ def run_evaluation(
             context_chunks=retrieved_chunks,
             semantic_sim=semantic_sim,
             no_judge=no_judge,
-            is_refusal=is_refusal
+            is_refusal=is_refusal,
+            provider=provider,
         )
 
         # Total tokens and costs

@@ -314,16 +314,20 @@ def _precision_at_k(retrieved_sources: List[str], expected_sources: List[str], k
 
 def _average_precision(retrieved_sources: List[str], expected_sources: List[str]) -> float:
     """
-    Average Precision (AP): averages precision at every rank where a relevant
-    result appears. Mean over queries gives MAP.
+    Average Precision (AP): averages precision at every rank where a new relevant
+    source document appears. Mean over queries gives MAP (range 0.0 to 1.0).
     """
-    num_relevant = 0
+    if not expected_sources:
+        return 1.0
+    seen_sources = set()
+    num_relevant_found = 0
     ap = 0.0
     for idx, src in enumerate(retrieved_sources):
-        if src in expected_sources:
-            num_relevant += 1
-            ap += num_relevant / (idx + 1)
-    return round(ap / len(expected_sources), 3) if expected_sources else 0.0
+        if src in expected_sources and src not in seen_sources:
+            seen_sources.add(src)
+            num_relevant_found += 1
+            ap += num_relevant_found / (idx + 1)
+    return round(ap / len(expected_sources), 3)
 
 
 def _coverage(retrieved_sources: List[str], expected_sources: List[str]) -> float:

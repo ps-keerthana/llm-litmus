@@ -280,6 +280,8 @@ def evaluate_with_oracle_routing(
     """
     # ── Case 1: Judge disabled via CLI ────────────────────────────────────
     if no_judge:
+        from core.metrics import compute_token_f1
+        token_f1 = compute_token_f1(answer, ground_truth)
         correctness_proxy = min(1.0, semantic_sim / 0.75)
         return {
             "correctness":   round(correctness_proxy, 3),
@@ -288,7 +290,7 @@ def evaluate_with_oracle_routing(
             "hallucination": "Not Evaluated",
             "confidence":    round(semantic_sim, 3),
             "reasoning":     f"Judge bypassed (--no-judge). Proxy correctness from sim={semantic_sim}.",
-            "token_f1":      "Not Evaluated",
+            "token_f1":      token_f1,
             "judge_disagreement": False,
         }, 0, 0, False
 

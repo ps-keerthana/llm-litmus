@@ -161,7 +161,13 @@ def main() -> None:
             logger.info(f"Hallucination:  {hall_val:.3f} (threshold: <= 0.05)")
         else:
             logger.info("Hallucination:  Not Evaluated (judge disabled — skipping threshold)")
-        logger.info(f"p95 Latency:    {latest.get('p95_latency_sec', 0.0):.2f}s (threshold: <= 3.5s)")
+        run_provider = str(latest.get("provider", "groq")).lower()
+        is_local = run_provider in {"ollama"}
+        p95 = latest.get('p95_latency_sec', 0.0)
+        if is_local:
+            logger.info(f"p95 Latency:    {p95:.2f}s (local provider '{run_provider}' — threshold skipped)")
+        else:
+            logger.info(f"p95 Latency:    {p95:.2f}s (threshold: <= 3.5s)")
         logger.info(f"Hit Rate:       {round(latest.get('avg_retrieval_hit_rate', 1.0) * 100.0, 1)}% (threshold: >= 80.0%)")
     logger.info("-" * 60)
 

@@ -54,7 +54,13 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
         failures.append(f"Average hallucination rate {latest_hall:.3f} exceeds absolute threshold {THRESHOLD_HALLUCINATION}")
 
     latest_p95 = latest.get("p95_latency_sec", 0.0)
-    if latest_p95 > THRESHOLD_P95_LATENCY:
+    # Latency SLA only applies to cloud API providers (Groq, OpenAI, Anthropic).
+    # Local providers (Ollama) run on CPU hardware — their wall-clock latency is not
+    # a user-facing concern and intentionally excluded from the p95 threshold.
+    local_providers = {"ollama"}
+    run_provider = str(latest.get("provider", "groq")).lower()
+    is_local_provider = run_provider in local_providers
+    if not is_local_provider and latest_p95 > THRESHOLD_P95_LATENCY:
         failures.append(f"p95 latency {latest_p95:.2f}s exceeds absolute threshold {THRESHOLD_P95_LATENCY}s")
 
     latest_hit = latest.get("avg_retrieval_hit_rate", 1.0) * 100.0  # Convert to %
@@ -81,7 +87,7 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
                 )
 
         base_p95 = baseline.get("p95_latency_sec", 0.0)
-        if base_p95 > 0:
+        if not is_local_provider and base_p95 > 0:
             latency_pct = ((latest_p95 - base_p95) / base_p95) * 100.0
             latency_abs = latest_p95 - base_p95
             if latency_pct > REGRESSION_LIMIT_P95_LATENCY_PERCENT and latency_abs > REGRESSION_LIMIT_P95_LATENCY_ABS:
@@ -92,7 +98,8 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
 
         base_cost = baseline.get("avg_cost_usd", 0.0)
         latest_cost = latest.get("avg_cost_usd", 0.0)
-        if base_cost > 0:
+        # Cost regression only meaningful for paid cloud providers
+        if not is_local_provider and base_cost > 0:
             cost_pct = ((latest_cost - base_cost) / base_cost) * 100.0
             if cost_pct > REGRESSION_LIMIT_COST_PERCENT:
                 failures.append(

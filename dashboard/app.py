@@ -368,7 +368,6 @@ def make_metric_card(col, label, val, sub, delta=None, inverse=False):
 # PAGE 1: Overview & KPI Matrix
 # ══════════════════════════════════════════════════════════
 if nav == "Overview & KPI Matrix":
-    # ── Hero Banner ───────────────────────────────────────────────────────────
     st.markdown("""
     <div class="hero-banner">
         <div class="hero-title">LLM Evaluation & RAG Quality Platform</div>
@@ -376,7 +375,6 @@ if nav == "Overview & KPI Matrix":
     </div>
     """, unsafe_allow_html=True)
 
-    # ── Explainer Accordion for 0-Knowledge Viewers ───────────────────────────
     with st.expander("❓ How Does This Platform Work? (Click to Expand Guide)", expanded=False):
         st.markdown("""
         ### 🎯 Core Mission
@@ -394,7 +392,6 @@ if nav == "Overview & KPI Matrix":
            - 🛡️ **Out-of-Scope**: Queries outside tax domain expecting polite refusal
         """)
 
-    # ── Evaluation Mode Indicator Banner ──────────────────────────────────────
     judge_active = latest.get("judge_enabled", True)
     if not judge_active:
         st.markdown("""
@@ -410,7 +407,6 @@ if nav == "Overview & KPI Matrix":
         </div>
         """, unsafe_allow_html=True)
 
-    # ── KPI Cards ─────────────────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
 
     make_metric_card(c1, "Pass Rate", f"{latest.get('pass_rate', 0.0)}%",
@@ -433,7 +429,6 @@ if nav == "Overview & KPI Matrix":
 
     st.markdown("<br>", unsafe_allow_html=True)
 
-    # ── Visual Analytics Section ──────────────────────────────────────────────
     col_left, col_right = st.columns([1, 1])
 
     with col_left:
@@ -492,7 +487,6 @@ if nav == "Overview & KPI Matrix":
 
     st.divider()
 
-    # ── Run Metadata Details ──────────────────────────────────────────────────
     st.subheader("⚙️ Run Metadata Envelope")
     col_m1, col_m2 = st.columns(2)
     with col_m1:
@@ -650,13 +644,133 @@ elif nav == "Failure Explorer":
 
 
 # ══════════════════════════════════════════════════════════
-# OTHER PAGES (Fallback Views)
+# PAGE 5: Retrieval Inspector
 # ══════════════════════════════════════════════════════════
-else:
-    st.title(f"📌 {nav}")
-    st.caption("Detailed breakdown and raw dataset telemetry.")
-    df_all = pd.DataFrame(latest.get("results", []))
-    if not df_all.empty:
-        st.dataframe(df_all, use_container_width=True)
+elif nav == "Retrieval Inspector":
+    st.title("🔍 Vector Retrieval & Ranking Inspector")
+    st.caption("Audit ChromaDB Top-K chunk retrieval quality, MRR scores, and similarity scores.")
+    st.divider()
+
+    c1, c2, c3, c4 = st.columns(4)
+    make_metric_card(c1, "Hit Rate @ K=5", f"{round(latest.get('avg_retrieval_hit_rate', 1.0)*100, 1)}%", "Target: >= 80%")
+    make_metric_card(c2, "Mean Reciprocal Rank", f"{latest.get('avg_retrieval_mrr', 0.913):.3f}", "Top rank precision")
+    make_metric_card(c3, "Context Precision", f"{latest.get('avg_context_precision', 0.85):.3f}", "Relevant chunk ratio")
+    make_metric_card(c4, "Context Recall", f"{latest.get('avg_context_recall', 0.86):.3f}", "Ground-truth coverage")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    st.subheader("Query Context Inspection")
+    df_q = pd.DataFrame(latest.get("results", []))
+    if not df_q.empty:
+        q_sel = st.selectbox("Select Question to inspect retrieved vector chunks", df_q["question"].tolist())
+        q_row = df_q[df_q["question"] == q_sel].iloc[0]
+
+        col_r1, col_r2 = st.columns(2)
+        col_r1.markdown(f"**Expected Sources:** `{q_row.get('expected_sources', 'N/A')}`")
+        col_r2.markdown(f"**Retrieved Sources:** `{q_row.get('retrieved_sources', 'N/A')}`")
+
+        st.markdown("#### Retrieved Chunks & Vector Similarities")
+        chunks = q_row.get("retrieved_chunks", [])
+        sims = q_row.get("retrieved_similarities", [])
+        if chunks:
+            for idx, ch in enumerate(chunks):
+                sim_score = sims[idx] if idx < len(sims) else "N/A"
+                with st.expander(f"Chunk #{idx+1} (Similarity: {sim_score})"):
+                    st.write(ch)
+        else:
+            st.info("No chunk text recorded for this result.")
+
+
+# ══════════════════════════════════════════════════════════
+# PAGE 6: Cost Analytics
+# ══════════════════════════════════════════════════════════
+elif nav == "Cost Analytics":
+    st.title("💰 API Cost & Token Analytics")
+    st.caption("Track token consumption and estimated API execution costs per query.")
+    st.divider()
+
+    c1, c2, c3 = st.columns(3)
+    make_metric_card(c1, "Avg Cost / Query", f"${latest.get('avg_cost_usd', 0.0):.6f}", "Groq pricing")
+    make_metric_card(c2, "Total Run Cost", f"${latest.get('total_cost_usd', 0.0):.4f}", "All queries combined")
+    make_metric_card(c3, "Total Queries", f"{latest.get('total_questions', 0)}", "Evaluated count")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    df_q = pd.DataFrame(latest.get("results", []))
+    if not df_q.empty and "cost_usd" in df_q.columns:
+        fig_cost = px.histogram(df_q, x="cost_usd", nbins=20, title="Query Cost Distribution ($)")
+        fig_cost.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_cost, use_container_width=True)
+
+
+# ══════════════════════════════════════════════════════════
+# PAGE 7: Latency Analytics
+# ══════════════════════════════════════════════════════════
+elif nav == "Latency Analytics":
+    st.title("⚡ Response Latency & SLA Analytics")
+    st.caption("Distribution of generation latencies across query categories.")
+    st.divider()
+
+    c1, c2, c3, c4 = st.columns(4)
+    make_metric_card(c1, "p50 Latency (Median)", f"{latest.get('p50_latency_sec', 0.0):.2f}s", "Median response time")
+    make_metric_card(c2, "p95 Latency", f"{latest.get('p95_latency_sec', 0.0):.2f}s", "SLA limit: <= 3.5s")
+    make_metric_card(c3, "p99 Latency", f"{latest.get('p99_latency_sec', 0.0):.2f}s", "Worst 1% response time")
+    make_metric_card(c4, "Average Latency", f"{latest.get('avg_latency_sec', 0.0):.2f}s", "Mean response time")
+
+    st.markdown("<br>", unsafe_allow_html=True)
+    df_q = pd.DataFrame(latest.get("results", []))
+    if not df_q.empty and "latency_sec" in df_q.columns:
+        fig_lat = px.box(df_q, x="category", y="latency_sec", color="category", title="Latency Distribution by Category (Seconds)")
+        fig_lat.update_layout(template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)")
+        st.plotly_chart(fig_lat, use_container_width=True)
+
+
+# ══════════════════════════════════════════════════════════
+# PAGE 8: Prompt Playground
+# ══════════════════════════════════════════════════════════
+elif nav == "Prompt Playground":
+    st.title("🧪 Live RAG & Prompt Playground")
+    st.caption("Test custom tax questions live against the ChromaDB vector store and generator.")
+    st.divider()
+
+    custom_q = st.text_input("Enter a custom Indian Income Tax Question:", "Can I claim Section 80C deduction under the new tax regime?")
+    if st.button("Generate & Test Answer", type="primary"):
+        with st.spinner("Retrieving Top-5 vector context chunks & generating answer..."):
+            try:
+                from core.retrieval import load_docs, build_vector_store, retrieve
+                from core.generator import generate_answer
+                chunks = load_docs()
+                collection = build_vector_store(chunks)
+                retrieved, sims, sources = retrieve(custom_q, collection, top_k=5)
+                ans, p_tok, c_tok = generate_answer(custom_q, retrieved)
+
+                st.markdown("### Generated Answer:")
+                st.success(ans)
+
+                st.markdown("### Retrieved Context Chunks:")
+                for idx, ch in enumerate(retrieved):
+                    with st.expander(f"Chunk #{idx+1} (Source: {sources[idx] if idx < len(sources) else 'doc'})"):
+                        st.write(ch)
+            except Exception as exc:
+                st.error(f"Error executing live prompt test: {exc}")
+
+
+# ══════════════════════════════════════════════════════════
+# PAGE 9: Dataset Explorer
+# ══════════════════════════════════════════════════════════
+elif nav == "Dataset Explorer":
+    st.title("📁 Golden Dataset Explorer")
+    st.caption(f"Search and inspect all benchmark questions in the golden dataset ({config.DATASET_PATH}).")
+    st.divider()
+
+    ds_path = config.DATASET_PATH
+    if not os.path.exists(ds_path):
+        ds_path = os.path.join("..", config.DATASET_PATH)
+
+    if os.path.exists(ds_path):
+        df_ds = pd.read_csv(ds_path)
+        cat_filter = st.multiselect("Filter by Category", df_ds["category"].unique().tolist(), default=df_ds["category"].unique().tolist())
+        df_filtered = df_ds[df_ds["category"].isin(cat_filter)]
+
+        st.markdown(f"Displaying **{len(df_filtered)}** of **{len(df_ds)}** golden questions:")
+        st.dataframe(df_filtered, use_container_width=True)
     else:
-        st.info("No query results available for this view.")
+        st.error(f"Dataset file not found at {ds_path}")

@@ -309,13 +309,16 @@ def evaluate_with_oracle_routing(
 
     # ── Case 3: Hard auto-fail (extremely low similarity) ─────────────────
     if semantic_sim <= ORACLE_AUTO_FAIL_THRESHOLD:
+        # An answer with near-zero semantic similarity is almost certainly
+        # hallucinated or completely off-topic — faithfulness should be 0.0
+        # and hallucination should be 1.0, not the other way around.
         return {
             "correctness":   0.0,
-            "faithfulness":  1.0,
+            "faithfulness":  0.0,
             "completeness":  0.0,
-            "hallucination": 0.0,
+            "hallucination": 1.0,
             "confidence":    1.0,
-            "reasoning":     f"Auto-FAIL: semantic sim {semantic_sim:.3f} <= {ORACLE_AUTO_FAIL_THRESHOLD}.",
+            "reasoning":     f"Auto-FAIL: semantic sim {semantic_sim:.3f} <= {ORACLE_AUTO_FAIL_THRESHOLD}. Answer is off-topic or hallucinated.",
             "token_f1":      0.0,
             "judge_disagreement": False,
         }, 0, 0, False

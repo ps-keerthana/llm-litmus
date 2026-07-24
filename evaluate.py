@@ -292,8 +292,12 @@ def run_evaluation(
 
         results.append(record)
 
-    # ── Aggregates ────────────────────────────────────────────────────────
-    latencies = [r["latency_sec"] for r in results]
+    # ── Aggregates ─────────────────────────────────────────────────────────────
+    # Only include real (uncached) latencies in percentile calculations.
+    # Cache hits resolve in ~0ms (in-process dict lookup) and skew p50/p95/p99
+    # to 0.0s, making the numbers meaningless as API latency indicators.
+    real_latencies = [r["latency_sec"] for r in results if not r.get("cached", False)]
+    latencies = real_latencies if real_latencies else [r["latency_sec"] for r in results]
     p50  = round(float(np.percentile(latencies, 50)), 2) if latencies else 0.0
     p95  = round(float(np.percentile(latencies, 95)), 2) if latencies else 0.0
     p99  = round(float(np.percentile(latencies, 99)), 2) if latencies else 0.0

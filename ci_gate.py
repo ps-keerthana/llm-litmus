@@ -90,8 +90,16 @@ def write_markdown_summary(latest: Dict[str, Any], failures: List[str]) -> None:
     token_f1  = latest.get("avg_token_f1", "N/A")
     p95_lat   = latest.get("p95_latency_sec", 0.0)
     avg_cost  = latest.get("avg_cost_usd", 0.0)
+    judge_enabled = latest.get("judge_enabled", True)
 
-    summary = f"""## {status_emoji} LLM-Litmus Evaluation Report
+    judge_note = (
+        "\n> ⚠️ **Judge disabled** (`--no-judge`). "
+        "Faithfulness and Hallucination are not computed in this run. "
+        "Run locally with `--provider groq` (without `--no-judge`) for full scores.\n"
+        if not judge_enabled else ""
+    )
+
+    summary = f"""## {status_emoji} LLM-Litmus Evaluation Report{judge_note}
 
 ### Run Summary
 - **Domain**: `{domain}`
@@ -100,6 +108,7 @@ def write_markdown_summary(latest: Dict[str, Any], failures: List[str]) -> None:
 - **Commit**: `{latest.get('git_commit_hash', 'unknown')}` on `{latest.get('branch', 'unknown')}`
 - **Provider/Model**: `{latest.get('provider', '?')}` / `{latest.get('llm_model', '?')}`
 - **Mode**: `{latest.get('mode', 'full')}`
+- **Judge**: `{"enabled" if judge_enabled else "disabled (--no-judge)"}`
 
 ### Retrieval Analytics
 | Metric | Value |

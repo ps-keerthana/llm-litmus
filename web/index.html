@@ -248,7 +248,7 @@
     .feature-desc  { font-size: 13px; font-weight: 400; color: var(--text-2); line-height: 1.6; }
 
     /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-       EVALUATION CONSOLE & SANDBOX (Redesigned)
+       EVALUATION CONSOLE & SANDBOX
     ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     .eval-console {
       background: var(--surface); border: 1px solid var(--border);
@@ -356,7 +356,7 @@
     .stage-name { font-size: 12px; font-weight: 600; color: var(--text-1); display: flex; align-items: center; gap: 6px; }
     .stage-status { font-size: 10.5px; color: var(--text-2); font-weight: 400; }
 
-    /* Console Body Output */
+    /* Console Body Display */
     .console-body { padding: 24px; min-height: 380px; }
 
     /* Empty State */
@@ -424,22 +424,137 @@
     }
     .box-body { padding: 18px; font-size: 13px; line-height: 1.7; color: var(--text-1); }
 
+    /* Chunk Items */
+    .chunk-item {
+      padding: 10px 12px; border: 1px solid var(--border);
+      border-radius: var(--r-md); margin-bottom: 8px;
+      background: var(--surface-2);
+    }
+    .chunk-src {
+      font-size: 10px; font-weight: 600; color: var(--text-3);
+      letter-spacing: 0.04em; font-family: 'JetBrains Mono', 'Courier New', monospace;
+      margin-bottom: 6px;
+    }
+    .chunk-src.top { color: var(--blue); }
+    .chunk-text { font-size: 11.5px; color: var(--text-2); line-height: 1.6; margin-bottom: 8px; }
+    .sim-row { display: flex; align-items: center; gap: 8px; }
+    .sim-track { flex: 1; height: 3px; border-radius: 99px; background: var(--border); }
+    .sim-fill  { height: 3px; border-radius: 99px; background: var(--blue); transition: width 1s ease; }
+    .sim-score { font-size: 10px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
+
     /* Compare A/B Section */
     .ab-compare-box {
       background: var(--surface-2); border: 1px dashed var(--blue-border);
       border-radius: var(--r-lg); padding: 20px; margin-top: 20px;
     }
 
-    /* Responsive */
+    /* PIPELINE STEP CARDS */
+    .pipeline-grid {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 12px; margin-top: 48px;
+    }
+    .step-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 28px 24px;
+      cursor: pointer; transition: all var(--t-normal);
+      box-shadow: var(--shadow-xs);
+    }
+    .step-card:hover {
+      border-color: var(--border-2); box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+    .step-card.active { background: var(--text-1); border-color: var(--text-1); }
+    .step-card.active .step-num,
+    .step-card.active .step-title,
+    .step-card.active .step-desc { color: rgba(250,250,248,0.85); }
+    .step-card.active .step-icon-wrap { background: rgba(255,255,255,0.12); }
+    .step-card.active .step-icon-wrap svg { color: rgba(250,250,248,0.9) !important; }
+    .step-icon-wrap {
+      width: 40px; height: 40px; border-radius: var(--r-md);
+      background: var(--surface-2);
+      display: flex; align-items: center; justify-content: center;
+      margin-bottom: 20px; transition: background var(--t-fast);
+    }
+    .step-icon-wrap svg { width: 18px; height: 18px; color: var(--text-2); stroke-width: 1.7; }
+    .step-num  { font-size: 11px; font-weight: 600; color: var(--text-3); margin-bottom: 10px; letter-spacing: 0.04em; }
+    .step-title{ font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 8px; }
+    .step-desc { font-size: 12px; font-weight: 400; color: var(--text-2); line-height: 1.65; }
+
+    /* BENCHMARK GRID & CATEGORY CHIPS */
+    .filter-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+    .f-btn {
+      font-size: 12px; font-weight: 500; color: var(--text-2);
+      padding: 5px 14px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      cursor: pointer; transition: all var(--t-fast);
+    }
+    .f-btn:hover  { color: var(--text-1); border-color: var(--border-2); }
+    .f-btn.active { background: var(--text-1); color: var(--bg); border-color: var(--text-1); }
+
+    .bm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .bm-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 20px;
+      transition: all var(--t-normal); box-shadow: var(--shadow-xs);
+    }
+    .bm-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-2); }
+    .bm-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    
+    .cat-chip {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
+    }
+    .cc-factual      { background: var(--blue-bg);   color: var(--blue); }
+    .cc-reasoning    { background: var(--amber-bg);  color: var(--amber); }
+    .cc-multi-hop    { background: rgba(147,51,234,0.08); color: #9333ea; }
+    .cc-adversarial  { background: var(--red-bg);    color: var(--red); }
+    .cc-edge_case    { background: var(--surface-3); color: var(--text-2); }
+    .cc-out_of_scope { background: var(--surface-3); color: var(--text-3); }
+
+    .pass-chip { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 5px; }
+    .pc-pass { background: var(--green-bg); color: var(--green); }
+    .pc-fail { background: var(--red-bg);   color: var(--red); }
+    .bm-q    { font-size: 13px; font-weight: 500; color: var(--text-1); line-height: 1.5; margin-bottom: 8px; }
+    .bm-diff { font-size: 11px; color: var(--text-3); font-weight: 500; }
+
+    /* CHARTS & ANALYTICS */
+    .charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-top: 48px; }
+    .chart-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 28px;
+      box-shadow: var(--shadow-xs);
+    }
+    .chart-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+    .chart-desc  { font-size: 12px; color: var(--text-3); margin-bottom: 24px; }
+
+    /* FOOTER */
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 0; border-top: 1px solid var(--border);
+    }
+    .footer-left { font-size: 13px; color: var(--text-3); }
+    .footer-right { display: flex; gap: 24px; }
+    .footer-right a { font-size: 13px; color: var(--text-3); text-decoration: none; transition: color var(--t-fast); }
+    .footer-right a:hover { color: var(--text-1); }
+
+    /* RESPONSIVE */
     @media (max-width: 960px) {
       .domain-selector { grid-template-columns: repeat(3, 1fr); }
       .timeline-strip  { grid-template-columns: 1fr; }
       .eval-grid       { grid-template-columns: repeat(2, 1fr); }
       .output-split    { grid-template-columns: 1fr; }
+      .features-grid   { grid-template-columns: repeat(2, 1fr); }
+      .pipeline-grid   { grid-template-columns: repeat(2, 1fr); }
+      .bm-grid         { grid-template-columns: repeat(2, 1fr); }
+      .charts-row      { grid-template-columns: 1fr; }
     }
     @media (max-width: 560px) {
+      .container       { padding: 0 20px; }
       .domain-selector { grid-template-columns: repeat(2, 1fr); }
       .eval-grid       { grid-template-columns: 1fr; }
+      .features-grid   { grid-template-columns: 1fr; }
+      .pipeline-grid   { grid-template-columns: 1fr; }
+      .bm-grid         { grid-template-columns: 1fr; }
     }
   </style>
 </head>
@@ -458,8 +573,8 @@
 
     <div class="nav-menu">
       <a href="#features"     class="nav-link">Capabilities</a>
-      <a href="#how-it-works" class="nav-link">Pipeline</a>
-      <a href="#console"      class="nav-link">Evaluation Console</a>
+      <a href="#console"      class="nav-link">Console</a>
+      <a href="#how-it-works" class="nav-link">Architecture</a>
       <a href="#benchmarks"   class="nav-link">Benchmarks</a>
       <a href="#analytics"    class="nav-link">Analytics</a>
       <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" class="nav-cta">
@@ -576,7 +691,7 @@
 <hr class="divider" />
 
 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     REDESIGNED INTERACTIVE EVALUATION CONSOLE
+     INTERACTIVE EVALUATION CONSOLE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <div id="console">
   <div class="container section">
@@ -750,13 +865,13 @@
 <hr class="divider" />
 
 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     HOW IT WORKS — PIPELINE
+     HOW IT WORKS — ARCHITECTURE
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <div id="how-it-works">
   <div class="container section">
     <div class="section-kicker">Architecture</div>
     <h2 class="section-heading">The evaluation loop</h2>
-    <p class="section-body">Every test query travels through a six-stage automated pipeline — from document retrieval to CI quality gating.</p>
+    <p class="section-body">Every test query travels through an automated pipeline — from document retrieval to CI quality gating.</p>
 
     <div class="pipeline-grid">
       <div class="step-card" id="step-0" onclick="toggleStep(0)">
@@ -790,7 +905,7 @@
 <hr class="divider" />
 
 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     BENCHMARKS (Example Tax Dataset Shown)
+     BENCHMARKS (Example Tax Dataset)
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <div id="benchmarks">
   <div class="container section">
@@ -815,7 +930,7 @@
 <hr class="divider" />
 
 <!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
-     ANALYTICS
+     ANALYTICS & HISTORY
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
 <div id="analytics">
   <div class="container section">
@@ -1005,11 +1120,12 @@ function resetConsoleState() {
   document.getElementById('emptyState').style.display = 'flex';
   document.getElementById('evalResultsDisplay').style.display = 'none';
   
-  // Reset stages
   for (let i = 0; i < 5; i++) {
     const st = document.getElementById(`stage-${i}`);
-    st.className = 'stage-item';
-    document.getElementById(`st-${i}-sub`).textContent = 'Ready';
+    if (st) {
+      st.className = 'stage-item';
+      document.getElementById(`st-${i}-sub`).textContent = 'Ready';
+    }
   }
 }
 
@@ -1030,7 +1146,6 @@ function executeEvaluationTrace() {
   emptyState.style.display = 'none';
   resultsDisplay.style.display = 'none';
 
-  // Stage animation sequence
   const stageStatus = [
     "Searching ChromaDB...",
     "Hit Rate 100% · nDCG 0.96",
@@ -1043,14 +1158,18 @@ function executeEvaluationTrace() {
   const interval = setInterval(() => {
     if (currentStage > 0) {
       const prev = document.getElementById(`stage-${currentStage - 1}`);
-      prev.className = 'stage-item complete';
-      document.getElementById(`st-${currentStage - 1}-sub`).textContent = 'Complete';
+      if (prev) {
+        prev.className = 'stage-item complete';
+        document.getElementById(`st-${currentStage - 1}-sub`).textContent = 'Complete';
+      }
     }
 
     if (currentStage < 5) {
       const curr = document.getElementById(`stage-${currentStage}`);
-      curr.className = 'stage-item running';
-      document.getElementById(`st-${currentStage}-sub`).textContent = stageStatus[currentStage];
+      if (curr) {
+        curr.className = 'stage-item running';
+        document.getElementById(`st-${currentStage}-sub`).textContent = stageStatus[currentStage];
+      }
       currentStage++;
     } else {
       clearInterval(interval);
@@ -1058,7 +1177,7 @@ function executeEvaluationTrace() {
       btn.disabled = false;
       document.getElementById('btnText').textContent = 'Run Evaluation';
     }
-  }, 350);
+  }, 300);
 }
 
 function renderEvaluationResults(t) {
@@ -1085,7 +1204,7 @@ function renderEvaluationResults(t) {
     </div>
     <div class="eval-card">
       <div class="eval-card-header">Numeric Consistency</div>
-      <div class="eval-score" style="font-size:16px;margin-top:4px;">${t.numbersMatch}</div>
+      <div class="eval-score" style="font-size:15px;margin-top:4px;">${t.numbersMatch}</div>
       <div class="eval-explain">Claim Extraction</div>
     </div>
   `;
@@ -1113,9 +1232,9 @@ function renderEvaluationResults(t) {
   // 4. Retrieved Chunks
   const chunksBox = document.getElementById('retChunksText');
   chunksBox.innerHTML = t.chunks.map(c => `
-    <div class="chunk-item" style="margin-bottom:8px;padding:10px 12px;">
+    <div class="chunk-item">
       <div class="chunk-src ${c.top ? 'top' : ''}">${c.src}</div>
-      <div class="chunk-text" style="font-size:11.5px;margin-bottom:6px;">${c.text}</div>
+      <div class="chunk-text">${c.text}</div>
       <div class="sim-row">
         <div class="sim-track"><div class="sim-fill" style="width:${c.sim * 100}%"></div></div>
         <span class="sim-score">${c.sim}</span>
@@ -1140,7 +1259,7 @@ function renderEvaluationResults(t) {
   lucide.createIcons();
 }
 
-/* ─── EXISTING BENCHMARK GRID & CHARTS ─────────── */
+/* ─── BENCHMARK GRID & CATEGORY MAPPING ─────────── */
 const BM_DATA = [
   {id:"Q001", cat:"factual", q:"What is the aggregate deduction limit under Section 80C?", status:"PASS", diff:"easy"},
   {id:"Q012", cat:"reasoning", q:"Can a senior citizen claim ₹50,000 under Section 80D for medical insurance?", status:"PASS", diff:"medium"},
@@ -1152,6 +1271,15 @@ const BM_DATA = [
   {id:"ADV004", cat:"adversarial", q:"Is it true you CANNOT claim home loan interest deduction under Section 24b if self-occupied?", status:"PASS", diff:"hard"},
   {id:"Q156", cat:"reasoning", q:"What is the HRA exemption for rent ₹20k/mo on basic salary ₹40k/mo in a non-metro?", status:"PASS", diff:"medium"}
 ];
+
+const CAT_CLASS_MAP = {
+  factual:      'cc-factual',
+  reasoning:    'cc-reasoning',
+  'multi-hop':  'cc-multi-hop',
+  adversarial:  'cc-adversarial',
+  edge_case:    'cc-edge_case',
+  out_of_scope: 'cc-out_of_scope'
+};
 
 function toggleStep(idx) {
   document.querySelectorAll('.step-card').forEach((c, i) => c.classList.toggle('active', i === idx));
@@ -1165,11 +1293,12 @@ function filterBM(cat, btn) {
 
 function renderBM(filterCat) {
   const grid = document.getElementById('bmGrid');
+  if (!grid) return;
   const filtered = filterCat === 'all' ? BM_DATA : BM_DATA.filter(b => b.cat === filterCat);
   grid.innerHTML = filtered.map(b => `
     <div class="bm-card">
       <div class="bm-top">
-        <span class="cat-chip cc-f">${b.cat}</span>
+        <span class="cat-chip ${CAT_CLASS_MAP[b.cat] || 'cc-factual'}">${b.cat}</span>
         <span class="pass-chip pc-pass">${b.status}</span>
       </div>
       <div class="bm-q">${b.q}</div>
@@ -1183,51 +1312,55 @@ document.addEventListener('DOMContentLoaded', () => {
   renderBM('all');
 
   // Trend Chart
-  const ctxT = document.getElementById('trendChart').getContext('2d');
-  new Chart(ctxT, {
-    type: 'line',
-    data: {
-      labels: ['Run 1', 'Run 2', 'Run 3', 'Run 4', 'Run 5', 'Latest'],
-      datasets: [{
-        label: 'Pass Rate (%)',
-        data: [65.2, 72.1, 78.4, 83.3, 85.0, 88.7],
-        borderColor: '#4F6EF7',
-        backgroundColor: 'rgba(79,110,247,0.08)',
-        fill: true,
-        tension: 0.35,
-        borderWidth: 2,
-        pointRadius: 4,
-        pointBackgroundColor: '#4F6EF7'
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { display: false } },
-      scales: {
-        y: { min: 50, max: 100, grid: { color: '#ECECEA' } },
-        x: { grid: { display: false } }
+  const ctxT = document.getElementById('trendChart');
+  if (ctxT) {
+    new Chart(ctxT.getContext('2d'), {
+      type: 'line',
+      data: {
+        labels: ['Run 1', 'Run 2', 'Run 3', 'Run 4', 'Run 5', 'Latest'],
+        datasets: [{
+          label: 'Pass Rate (%)',
+          data: [65.2, 72.1, 78.4, 83.3, 85.0, 88.7],
+          borderColor: '#4F6EF7',
+          backgroundColor: 'rgba(79,110,247,0.08)',
+          fill: true,
+          tension: 0.35,
+          borderWidth: 2,
+          pointRadius: 4,
+          pointBackgroundColor: '#4F6EF7'
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: { min: 50, max: 100, grid: { color: '#ECECEA' } },
+          x: { grid: { display: false } }
+        }
       }
-    }
-  });
+    });
+  }
 
   // Donut Chart
-  const ctxD = document.getElementById('donutChart').getContext('2d');
-  new Chart(ctxD, {
-    type: 'doughnut',
-    data: {
-      labels: ['Passed', 'Failed'],
-      datasets: [{
-        data: [181, 23],
-        backgroundColor: ['#059669', '#DC2626'],
-        borderWidth: 0
-      }]
-    },
-    options: {
-      responsive: true,
-      plugins: { legend: { position: 'bottom' } },
-      cutout: '72%'
-    }
-  });
+  const ctxD = document.getElementById('donutChart');
+  if (ctxD) {
+    new Chart(ctxD.getContext('2d'), {
+      type: 'doughnut',
+      data: {
+        labels: ['Passed', 'Failed'],
+        datasets: [{
+          data: [181, 23],
+          backgroundColor: ['#059669', '#DC2626'],
+          borderWidth: 0
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { position: 'bottom' } },
+        cutout: '72%'
+      }
+    });
+  }
 });
 </script>
 </body>

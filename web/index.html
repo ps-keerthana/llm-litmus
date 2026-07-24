@@ -3,616 +3,731 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>LLM-Litmus · RAG Evaluation Platform</title>
-  <meta name="description" content="Automated benchmark testing & quality gating for LLM RAG pipelines across 204 Indian income tax test cases." />
+  <title>LLM-Litmus — RAG Evaluation Platform</title>
+  <meta name="description" content="Automated quality gating for LLM RAG pipelines. 204 benchmark queries, CI integration, real-time telemetry." />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@500;600;700&family=DM+Sans:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
 
   <style>
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       RESET & BASE
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 16px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
 
     :root {
-      --cream:    #faf8f5;
-      --cream-2:  #f4f1ec;
-      --cream-3:  #ede9e3;
-      --white:    #ffffff;
-      --ink:      #1c1917;
-      --ink-2:    #44403c;
-      --ink-3:    #78716c;
-      --ink-4:    #a8a29e;
-      --border:   #e7e3dc;
-      --border-2: #d4cfc8;
-      --sage:     #3d6b61;
-      --sage-dim: rgba(61,107,97,0.08);
-      --amber:    #92400e;
-      --amber-dim:rgba(146,64,14,0.08);
-      --rose:     #7c2d12;
-      --rose-dim: rgba(124,45,18,0.08);
-      --shadow-sm: 0 1px 3px rgba(28,25,23,0.06), 0 1px 2px rgba(28,25,23,0.04);
-      --shadow-md: 0 4px 16px rgba(28,25,23,0.08), 0 2px 6px rgba(28,25,23,0.05);
-      --shadow-lg: 0 16px 48px rgba(28,25,23,0.1), 0 4px 12px rgba(28,25,23,0.06);
-    }
+      /* Surfaces */
+      --bg:          #FAFAF8;
+      --surface:     #FFFFFF;
+      --surface-2:   #F7F7F5;
+      --surface-3:   #F0F0EE;
 
-    html { scroll-behavior: smooth; }
+      /* Borders */
+      --border:      #ECECEA;
+      --border-2:    #E0E0DE;
+
+      /* Text */
+      --text-1:  #1A1A1A;
+      --text-2:  #6B7280;
+      --text-3:  #9CA3AF;
+
+      /* Primary — Slate Blue */
+      --blue:      #4F6EF7;
+      --blue-dark: #3B59D9;
+      --blue-bg:   rgba(79,110,247,0.06);
+      --blue-border: rgba(79,110,247,0.18);
+
+      /* Status */
+      --green:    #059669;
+      --green-bg: rgba(5,150,105,0.07);
+      --green-border: rgba(5,150,105,0.2);
+      --red:      #DC2626;
+      --red-bg:   rgba(220,38,38,0.06);
+      --amber:    #B45309;
+      --amber-bg: rgba(180,83,9,0.07);
+
+      /* Shadows */
+      --shadow-xs: 0 1px 2px rgba(0,0,0,0.04);
+      --shadow-sm: 0 1px 4px rgba(0,0,0,0.05), 0 2px 8px rgba(0,0,0,0.04);
+      --shadow-md: 0 4px 16px rgba(0,0,0,0.06), 0 2px 6px rgba(0,0,0,0.04);
+      --shadow-lg: 0 12px 40px rgba(0,0,0,0.07), 0 4px 12px rgba(0,0,0,0.05);
+
+      /* Radius */
+      --r-sm:  6px;
+      --r-md:  10px;
+      --r-lg:  16px;
+      --r-xl:  20px;
+
+      /* Transitions */
+      --t-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
+      --t-normal: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+      --t-slow:   350ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
 
     body {
-      background: var(--cream);
-      color: var(--ink);
-      font-family: 'DM Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      font-family: 'Inter', -apple-system, sans-serif;
+      line-height: 1.6;
       min-height: 100vh;
-      overflow-x: hidden;
     }
 
-    /* ── UTILITY ── */
-    .serif { font-family: 'Playfair Display', Georgia, serif; }
-    .mono  { font-family: 'JetBrains Mono', 'Courier New', monospace; }
-    .wrap  { max-width: 1140px; margin: 0 auto; padding: 0 28px; }
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       LAYOUT UTILITIES
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .container { max-width: 1100px; margin: 0 auto; padding: 0 32px; }
+    .section   { padding: 96px 0; }
+    .section-sm{ padding: 64px 0; }
 
-    /* ── SUBTLE PAPER TEXTURE ── */
-    body::before {
-      content: '';
-      position: fixed; inset: 0;
-      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='400' height='400'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.75' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='400' height='400' filter='url(%23n)' opacity='0.025'/%3E%3C/svg%3E");
-      pointer-events: none; z-index: 0;
-    }
-    .z1 { position: relative; z-index: 1; }
-
-    /* ── NAV ── */
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       NAVIGATION
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
     nav {
-      position: sticky; top: 0; z-index: 50;
-      background: rgba(250,248,245,0.88);
-      backdrop-filter: blur(20px);
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(250,250,248,0.92);
+      backdrop-filter: blur(24px);
       border-bottom: 1px solid var(--border);
     }
     .nav-inner {
       display: flex; align-items: center; justify-content: space-between;
-      height: 60px;
+      height: 58px;
     }
-    .logo {
-      display: flex; align-items: center; gap: 10px; text-decoration: none;
+    .logo-wrap {
+      display: flex; align-items: center; gap: 10px;
+      text-decoration: none; color: var(--text-1);
     }
-    .logo-mark {
-      width: 32px; height: 32px; border-radius: 8px;
-      background: var(--ink);
+    .logo-icon {
+      width: 30px; height: 30px; border-radius: 8px;
+      background: var(--text-1);
       display: flex; align-items: center; justify-content: center;
-      font-size: 14px; flex-shrink: 0;
+      color: var(--bg); font-size: 14px; flex-shrink: 0;
+      box-shadow: var(--shadow-xs);
     }
-    .logo-name {
-      font-size: 15px; font-weight: 700; color: var(--ink); letter-spacing: -0.3px;
-    }
-    .logo-version {
-      font-size: 10px; font-weight: 600; letter-spacing: 0.04em;
-      padding: 2px 7px; border-radius: 4px;
-      background: var(--cream-2); color: var(--ink-3);
+    .logo-text  { font-size: 15px; font-weight: 700; letter-spacing: -0.3px; }
+    .logo-badge {
+      font-size: 10px; font-weight: 600; letter-spacing: 0.02em;
+      padding: 2px 8px; border-radius: 99px;
+      background: var(--surface-2); color: var(--text-3);
       border: 1px solid var(--border);
     }
-    .nav-links { display: flex; align-items: center; gap: 28px; }
-    .nav-links a {
-      font-size: 13px; font-weight: 500; color: var(--ink-3);
-      text-decoration: none; transition: color 0.15s;
+    .nav-menu { display: flex; align-items: center; gap: 6px; }
+    .nav-link {
+      font-size: 13px; font-weight: 500; color: var(--text-2);
+      padding: 5px 12px; border-radius: var(--r-sm);
+      text-decoration: none; transition: all var(--t-fast);
     }
-    .nav-links a:hover { color: var(--ink); }
-    .btn-gh {
+    .nav-link:hover { color: var(--text-1); background: var(--surface-2); }
+    .nav-cta {
       display: inline-flex; align-items: center; gap: 6px;
-      font-size: 12px; font-weight: 600;
-      padding: 7px 14px; border-radius: 7px;
-      background: var(--ink); color: var(--cream);
-      text-decoration: none; transition: opacity 0.15s;
+      font-size: 13px; font-weight: 600;
+      padding: 7px 16px; border-radius: var(--r-md);
+      background: var(--text-1); color: var(--bg);
+      text-decoration: none; transition: opacity var(--t-fast);
+      margin-left: 8px; box-shadow: var(--shadow-xs);
     }
-    .btn-gh:hover { opacity: 0.85; }
+    .nav-cta:hover { opacity: 0.82; }
 
-    /* ── HERO ── */
-    .hero { padding: 88px 0 72px; }
-    .hero-eyebrow {
-      display: inline-flex; align-items: center; gap: 8px;
-      font-size: 11px; font-weight: 600; letter-spacing: 0.06em; text-transform: uppercase;
-      color: var(--sage); margin-bottom: 24px;
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       HERO
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .hero { padding: 104px 0 80px; }
+    .hero-label {
+      display: inline-flex; align-items: center; gap: 7px;
+      font-size: 12px; font-weight: 600; color: var(--green);
+      padding: 4px 12px; border-radius: 99px;
+      background: var(--green-bg); border: 1px solid var(--green-border);
+      margin-bottom: 28px;
     }
-    .eyebrow-dot {
-      width: 6px; height: 6px; border-radius: 50%;
-      background: var(--sage); animation: breathe 3s ease-in-out infinite;
+    .status-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      animation: statusPulse 3s ease-in-out infinite;
     }
-    @keyframes breathe { 0%,100%{ opacity:1 } 50%{ opacity:0.35 } }
+    @keyframes statusPulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:.5;transform:scale(.9)} }
 
     .hero-title {
-      font-size: clamp(38px, 5.5vw, 64px);
-      font-weight: 600; letter-spacing: -2px; line-height: 1.06;
-      color: var(--ink); max-width: 760px;
+      font-size: clamp(40px, 5.5vw, 62px);
+      font-weight: 800; letter-spacing: -2.5px; line-height: 1.04;
+      color: var(--text-1); max-width: 700px; margin-bottom: 20px;
     }
-    .hero-title em { font-style: italic; color: var(--ink-2); }
-    .hero-sub {
-      margin-top: 22px; font-size: 16px; font-weight: 400;
-      color: var(--ink-3); max-width: 540px; line-height: 1.7;
+    .hero-desc {
+      font-size: 17px; font-weight: 400; color: var(--text-2);
+      max-width: 520px; line-height: 1.7; margin-bottom: 36px;
     }
-    .hero-ctas {
-      margin-top: 36px; display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
-    }
+    .hero-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
     .btn-primary {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 11px 22px; border-radius: 8px;
-      background: var(--ink); color: var(--cream);
-      font-size: 13px; font-weight: 600;
-      text-decoration: none; transition: opacity 0.15s;
+      font-size: 14px; font-weight: 600;
+      padding: 10px 22px; border-radius: var(--r-md);
+      background: var(--text-1); color: var(--bg);
+      text-decoration: none; border: none; cursor: pointer;
+      font-family: 'Inter', sans-serif;
       box-shadow: var(--shadow-sm);
+      transition: opacity var(--t-fast), transform var(--t-fast);
     }
-    .btn-primary:hover { opacity: 0.85; }
-    .btn-outline {
+    .btn-primary:hover { opacity: 0.84; transform: translateY(-1px); }
+    .btn-primary:active { transform: translateY(0); }
+
+    .btn-secondary {
       display: inline-flex; align-items: center; gap: 8px;
-      padding: 11px 22px; border-radius: 8px;
-      background: var(--white); color: var(--ink-2);
-      border: 1px solid var(--border);
-      font-size: 13px; font-weight: 600;
-      text-decoration: none; transition: all 0.15s;
+      font-size: 14px; font-weight: 500;
+      padding: 10px 22px; border-radius: var(--r-md);
+      background: var(--surface); color: var(--text-1);
+      text-decoration: none; border: 1px solid var(--border-2);
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      box-shadow: var(--shadow-xs);
+      transition: all var(--t-fast);
+    }
+    .btn-secondary:hover { border-color: var(--text-3); transform: translateY(-1px); }
+
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       METRICS STRIP
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .metrics-strip {
+      display: grid; grid-template-columns: repeat(4, 1fr);
+      gap: 0; margin-top: 64px;
+      border: 1px solid var(--border); border-radius: var(--r-lg);
+      background: var(--surface); overflow: hidden;
       box-shadow: var(--shadow-sm);
     }
-    .btn-outline:hover { border-color: var(--border-2); color: var(--ink); }
+    .metric-cell {
+      padding: 28px 28px;
+      border-right: 1px solid var(--border);
+      transition: background var(--t-fast);
+    }
+    .metric-cell:last-child { border-right: none; }
+    .metric-cell:hover { background: var(--surface-2); }
+    .metric-label {
+      font-size: 11px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-3); margin-bottom: 10px;
+    }
+    .metric-value {
+      font-size: 36px; font-weight: 800; letter-spacing: -1.5px;
+      color: var(--text-1); line-height: 1; margin-bottom: 6px;
+    }
+    .metric-sub { font-size: 12px; font-weight: 500; color: var(--text-3); }
+    .metric-up  { color: var(--green); }
 
-    /* ── KPI STRIP ── */
-    .kpi-strip {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 1px; margin-top: 56px;
-      background: var(--border);
-      border: 1px solid var(--border);
-      border-radius: 14px; overflow: hidden;
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       SECTION HEADERS
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .section-kicker {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.06em;
+      text-transform: uppercase; color: var(--text-3); margin-bottom: 12px;
     }
-    .kpi-cell {
-      background: var(--white);
-      padding: 28px 24px;
-      transition: background 0.15s;
+    .section-heading {
+      font-size: clamp(24px, 3vw, 36px); font-weight: 700;
+      letter-spacing: -1px; color: var(--text-1); margin-bottom: 8px;
     }
-    .kpi-cell:hover { background: var(--cream); }
-    .kpi-label {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.07em;
-      text-transform: uppercase; color: var(--ink-4); margin-bottom: 10px;
+    .section-body {
+      font-size: 15px; font-weight: 400; color: var(--text-2);
+      max-width: 480px; line-height: 1.7;
     }
-    .kpi-value {
-      font-size: 38px; font-weight: 700; letter-spacing: -1.5px;
-      color: var(--ink); line-height: 1;
-    }
-    .kpi-note { font-size: 11px; color: var(--ink-4); margin-top: 6px; font-weight: 500; }
-    .kpi-up { color: var(--sage); }
 
-    /* ── SECTION ── */
-    section { padding: 72px 0; }
-    .section-eyebrow {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.08em;
-      text-transform: uppercase; color: var(--ink-4); margin-bottom: 12px;
-    }
-    .section-title {
-      font-size: clamp(22px, 3vw, 34px);
-      font-weight: 600; letter-spacing: -1px; color: var(--ink); margin-bottom: 8px;
-    }
-    .section-sub {
-      font-size: 14px; color: var(--ink-3); line-height: 1.65; max-width: 500px;
-    }
-    .divider { height: 1px; background: var(--border); margin: 0; }
+    hr.divider { border: none; border-top: 1px solid var(--border); margin: 0; }
 
-    /* ── PIPELINE STEPS ── */
-    .pipeline {
-      display: grid; grid-template-columns: repeat(4, 1fr);
-      gap: 16px; margin-top: 44px;
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       HOW IT WORKS — PIPELINE
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .pipeline-grid {
+      display: grid; grid-template-columns: repeat(4,1fr);
+      gap: 12px; margin-top: 48px;
     }
-    .pipe-step {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 12px; padding: 24px 20px;
-      cursor: pointer; transition: all 0.2s;
-      box-shadow: var(--shadow-sm);
+    .step-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 28px 24px;
+      cursor: pointer; transition: all var(--t-normal);
+      box-shadow: var(--shadow-xs);
     }
-    .pipe-step:hover {
+    .step-card:hover {
       border-color: var(--border-2);
       box-shadow: var(--shadow-md);
       transform: translateY(-2px);
     }
-    .pipe-step.active {
-      border-color: var(--ink);
-      background: var(--ink);
+    .step-card.active {
+      background: var(--text-1); border-color: var(--text-1);
     }
-    .pipe-step.active .pipe-num,
-    .pipe-step.active .pipe-title,
-    .pipe-step.active .pipe-desc { color: var(--cream); }
-    .pipe-step.active .pipe-num { border-color: rgba(255,255,255,0.2); }
-    .pipe-num {
-      width: 28px; height: 28px; border-radius: 6px;
-      border: 1px solid var(--border);
+    .step-card.active .step-num,
+    .step-card.active .step-title,
+    .step-card.active .step-desc { color: rgba(250,250,248,0.85); }
+    .step-card.active .step-icon-wrap { background: rgba(255,255,255,0.12); }
+    .step-card.active .step-icon-wrap svg { color: rgba(250,250,248,0.9) !important; }
+    .step-icon-wrap {
+      width: 40px; height: 40px; border-radius: var(--r-md);
+      background: var(--surface-2);
       display: flex; align-items: center; justify-content: center;
-      font-size: 11px; font-weight: 700; color: var(--ink-3);
-      margin-bottom: 20px;
+      margin-bottom: 20px; transition: background var(--t-fast);
     }
-    .pipe-emoji { font-size: 22px; margin-bottom: 12px; line-height: 1; }
-    .pipe-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 8px; }
-    .pipe-desc  { font-size: 12px; color: var(--ink-3); line-height: 1.65; }
+    .step-icon-wrap svg { width: 18px; height: 18px; color: var(--text-2); stroke-width: 1.7; }
+    .step-num  { font-size: 11px; font-weight: 600; color: var(--text-3); margin-bottom: 10px; letter-spacing: 0.04em; }
+    .step-title{ font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 8px; }
+    .step-desc { font-size: 12px; font-weight: 400; color: var(--text-2); line-height: 1.65; }
 
-    /* ── SANDBOX ── */
-    .sandbox-wrap {
-      background: var(--white);
-      border: 1px solid var(--border);
-      border-radius: 16px; overflow: hidden;
-      margin-top: 44px;
-      box-shadow: var(--shadow-md);
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       LIVE SANDBOX
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .sandbox {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-xl); overflow: hidden;
+      box-shadow: var(--shadow-md); margin-top: 48px;
     }
-    .sandbox-bar {
+
+    /* Window chrome */
+    .sb-chrome {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 0 24px; height: 48px;
-      border-bottom: 1px solid var(--border);
-      background: var(--cream-2);
+      padding: 0 20px; height: 44px;
+      background: var(--surface-2); border-bottom: 1px solid var(--border);
     }
-    .sandbox-dots { display: flex; gap: 6px; }
-    .dot-w { width:10px; height:10px; border-radius:50%; background: var(--border-2); }
-    .live-tag {
+    .sb-dots { display: flex; gap: 6px; }
+    .sb-dot { width: 11px; height: 11px; border-radius: 50%; }
+    .d-red    { background: #FF5F57; }
+    .d-yellow { background: #FEBC2E; }
+    .d-green  { background: #28C840; }
+    .sb-title { font-size: 12px; font-weight: 500; color: var(--text-3); }
+    .sb-status {
       display: flex; align-items: center; gap: 6px;
-      font-size: 11px; font-weight: 600; color: var(--sage);
+      font-size: 11px; font-weight: 600; color: var(--green);
     }
-    .live-blink {
-      width: 6px; height: 6px; border-radius: 50%; background: var(--sage);
-      animation: breathe 2s ease-in-out infinite;
-    }
-    .sample-pills { display: flex; gap: 6px; flex-wrap: wrap; }
-    .pill {
-      font-size: 11px; font-weight: 600; padding: 4px 11px;
-      border-radius: 6px; border: 1px solid var(--border);
-      background: var(--cream); color: var(--ink-3);
-      cursor: pointer; transition: all 0.15s;
-    }
-    .pill:hover { border-color: var(--border-2); color: var(--ink); }
-    .pill.active {
-      background: var(--ink); border-color: var(--ink); color: var(--cream);
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--green);
+      animation: statusPulse 2.5s ease-in-out infinite;
     }
 
-    .sandbox-body { padding: 24px; }
-    .query-row { display: flex; gap: 10px; margin-bottom: 20px; }
-    .query-input {
-      flex: 1; background: var(--cream);
-      border: 1px solid var(--border); border-radius: 8px;
-      padding: 11px 14px; font-size: 13px;
-      color: var(--ink); font-family: 'DM Sans', sans-serif;
-      outline: none; transition: border-color 0.15s;
+    /* Tabs */
+    .sb-tabs {
+      display: flex; align-items: center; gap: 0;
+      padding: 0 20px;
+      border-bottom: 1px solid var(--border);
+      overflow-x: auto;
     }
-    .query-input:focus { border-color: var(--ink); background: var(--white); }
-    .run-btn {
+    .sb-tab {
+      font-size: 12px; font-weight: 500; color: var(--text-3);
+      padding: 11px 16px; cursor: pointer; border-bottom: 2px solid transparent;
+      transition: all var(--t-fast); white-space: nowrap;
+    }
+    .sb-tab:hover { color: var(--text-1); }
+    .sb-tab.active { color: var(--text-1); border-bottom-color: var(--text-1); font-weight: 600; }
+
+    /* Input area */
+    .sb-input-area { padding: 20px 20px 16px; }
+    .sb-input-row  { display: flex; gap: 8px; }
+    .sb-input {
+      flex: 1; background: var(--surface-2);
+      border: 1px solid var(--border); border-radius: var(--r-md);
+      padding: 11px 16px; font-size: 13px; color: var(--text-1);
+      font-family: 'Inter', sans-serif; outline: none;
+      transition: border-color var(--t-fast), box-shadow var(--t-fast);
+    }
+    .sb-input:focus {
+      border-color: var(--blue); background: var(--surface);
+      box-shadow: 0 0 0 3px rgba(79,110,247,0.10);
+    }
+    .sb-run {
       display: flex; align-items: center; gap: 7px;
-      padding: 11px 20px; border-radius: 8px;
-      background: var(--ink); border: none;
-      color: var(--cream); font-size: 13px; font-weight: 600;
-      cursor: pointer; font-family: 'DM Sans', sans-serif;
-      transition: opacity 0.15s; white-space: nowrap;
+      padding: 11px 20px; border-radius: var(--r-md);
+      background: var(--text-1); color: var(--bg);
+      font-size: 13px; font-weight: 600;
+      border: none; cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: opacity var(--t-fast), transform var(--t-fast);
+      white-space: nowrap;
     }
-    .run-btn:hover { opacity: 0.82; }
-    .run-btn:disabled { opacity: 0.4; cursor: not-allowed; }
+    .sb-run:hover { opacity: 0.82; transform: translateY(-1px); }
+    .sb-run:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+    .sb-run svg { width: 14px; height: 14px; stroke-width: 2; }
 
-    /* Status chips */
-    .status-row { display: flex; gap: 8px; margin-bottom: 18px; flex-wrap: wrap; }
-    .chip {
+    /* Status bar */
+    .sb-statusbar {
+      display: none;
+      align-items: center; gap: 8px;
+      padding: 0 20px 14px; flex-wrap: wrap;
+    }
+    .status-pill {
       display: inline-flex; align-items: center; gap: 5px;
       font-size: 11px; font-weight: 600; padding: 4px 10px;
-      border-radius: 5px; border: 1px solid transparent;
+      border-radius: 6px; border: 1px solid;
     }
-    .chip-pass { background: var(--sage-dim); color: var(--sage); border-color: rgba(61,107,97,0.18); }
-    .chip-neutral { background: var(--cream-2); color: var(--ink-3); border-color: var(--border); }
-    .chip-dot { width:5px; height:5px; border-radius:50%; }
-    .dot-sage { background: var(--sage); }
-    .dot-stone { background: var(--ink-4); }
+    .pill-green  { color: var(--green);  background: var(--green-bg);  border-color: var(--green-border); }
+    .pill-muted  { color: var(--text-2); background: var(--surface-2); border-color: var(--border); }
+    .pill-blue   { color: var(--blue);   background: var(--blue-bg);   border-color: var(--blue-border); }
+    .pill-dot { width: 5px; height: 5px; border-radius: 50%; }
+    .pd-green { background: var(--green); }
+    .pd-gray  { background: var(--text-3); }
+    .pd-blue  { background: var(--blue); }
 
     /* Output panels */
-    .output-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
-    .output-panel {
-      border: 1px solid var(--border); border-radius: 10px; overflow: hidden;
-      background: var(--cream);
-    }
-    .op-head {
+    .sb-output { display: grid; grid-template-columns: 1fr 1fr; gap: 0; }
+    .sb-panel  { border-top: 1px solid var(--border); }
+    .sb-panel:first-child { border-right: 1px solid var(--border); }
+    .panel-header {
       display: flex; align-items: center; justify-content: space-between;
-      padding: 10px 14px;
-      border-bottom: 1px solid var(--border);
-      background: var(--white);
+      padding: 12px 20px; border-bottom: 1px solid var(--border);
+      background: var(--surface-2);
     }
-    .op-label { font-size: 10px; font-weight: 700; letter-spacing: 0.07em; text-transform: uppercase; }
-    .label-sage  { color: var(--sage); }
-    .label-amber { color: var(--amber); }
-    .op-meta { font-size: 10px; color: var(--ink-4); font-family: 'JetBrains Mono', monospace; }
-    .op-body { padding: 16px; min-height: 130px; }
-    .answer-text { font-size: 13px; color: var(--ink-2); line-height: 1.75; }
+    .panel-label {
+      display: flex; align-items: center; gap: 6px;
+      font-size: 11px; font-weight: 600; letter-spacing: 0.05em; text-transform: uppercase;
+    }
+    .panel-label svg { width: 13px; height: 13px; stroke-width: 2; }
+    .panel-label.green  { color: var(--green); }
+    .panel-label.muted  { color: var(--text-3); }
+    .panel-meta { font-size: 10px; font-weight: 500; color: var(--text-3); font-variant-numeric: tabular-nums; }
+    .panel-body { padding: 20px; min-height: 160px; }
 
-    /* Chunk cards */
-    .chunk-card {
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;
-      border-left: 3px solid var(--ink-4);
+    .answer-text {
+      font-size: 13.5px; font-weight: 400; color: var(--text-1);
+      line-height: 1.78; letter-spacing: 0.01em;
     }
-    .chunk-card:first-child { border-left-color: var(--sage); }
-    .ch-src {
-      font-size: 10px; font-weight: 600; color: var(--ink-4);
-      font-family: 'JetBrains Mono', monospace; margin-bottom: 6px;
+    .answer-text strong { font-weight: 600; color: var(--text-1); }
+
+    .cursor-blink::after {
+      content: '|'; color: var(--blue);
+      animation: cursorBlink 1.1s step-end infinite;
     }
-    .chunk-card:first-child .ch-src { color: var(--sage); }
-    .ch-text { font-size: 12px; color: var(--ink-2); line-height: 1.65; margin-bottom: 8px; }
-    .sim-bar { display: flex; align-items: center; gap: 8px; }
+    @keyframes cursorBlink { 0%,100%{opacity:1} 50%{opacity:0} }
+
+    /* Chunk items */
+    .chunk-item {
+      padding: 14px 16px; border: 1px solid var(--border);
+      border-radius: var(--r-md); margin-bottom: 10px;
+      background: var(--surface-2);
+      transition: border-color var(--t-fast);
+    }
+    .chunk-item:hover { border-color: var(--border-2); }
+    .chunk-src {
+      font-size: 10px; font-weight: 600; color: var(--text-3);
+      letter-spacing: 0.04em; font-family: 'JetBrains Mono', 'Courier New', monospace;
+      margin-bottom: 6px;
+    }
+    .chunk-src.top { color: var(--blue); }
+    .chunk-text { font-size: 12px; color: var(--text-2); line-height: 1.65; margin-bottom: 10px; }
+    .sim-row { display: flex; align-items: center; gap: 8px; }
     .sim-track {
-      flex: 1; height: 3px; border-radius: 99px; background: var(--cream-3);
+      flex: 1; height: 3px; border-radius: 99px; background: var(--border);
     }
     .sim-fill {
-      height: 3px; border-radius: 99px;
-      background: var(--sage); transition: width 0.9s cubic-bezier(0.4,0,0.2,1);
+      height: 3px; border-radius: 99px; background: var(--blue);
+      transition: width 1s cubic-bezier(.4,0,.2,1);
     }
-    .sim-val { font-size: 10px; font-weight: 700; color: var(--sage); font-family: 'JetBrains Mono', monospace; }
+    .sim-score { font-size: 10px; font-weight: 700; color: var(--blue); font-variant-numeric: tabular-nums; }
 
-    /* Typing cursor */
-    .tcursor::after { content: '▋'; font-size: 12px; color: var(--ink-3); animation: blink 1s step-end infinite; }
-    @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0} }
+    /* Loading skeleton */
+    .skeleton {
+      border-radius: 4px; background: linear-gradient(90deg, var(--surface-2) 25%, var(--surface-3) 50%, var(--surface-2) 75%);
+      background-size: 400% 100%; animation: shimmer 1.5s ease-in-out infinite;
+    }
+    @keyframes shimmer { 0%{background-position:100% 0} 100%{background-position:-100% 0} }
 
     /* Spinner */
-    .spinner {
-      width: 14px; height: 14px;
-      border: 2px solid rgba(250,248,245,0.3);
-      border-top-color: var(--cream);
-      border-radius: 50%; animation: spin 0.7s linear infinite;
-    }
-    @keyframes spin { to { transform: rotate(360deg); } }
+    .spin-icon { animation: iconSpin 0.8s linear infinite; }
+    @keyframes iconSpin { to { transform: rotate(360deg); } }
 
-    /* ── BENCHMARK TABLE ── */
-    .filter-bar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; margin-top: 36px; }
-    .filt {
-      font-size: 11px; font-weight: 600; padding: 5px 13px;
-      border-radius: 6px; border: 1px solid var(--border);
-      background: var(--white); color: var(--ink-3);
-      cursor: pointer; transition: all 0.15s;
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       BENCHMARK GRID
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .filter-row { display: flex; align-items: center; gap: 6px; flex-wrap: wrap; margin-bottom: 24px; }
+    .f-btn {
+      font-size: 12px; font-weight: 500; color: var(--text-2);
+      padding: 5px 14px; border-radius: 8px;
+      border: 1px solid var(--border); background: var(--surface);
+      cursor: pointer; transition: all var(--t-fast);
     }
-    .filt:hover { border-color: var(--border-2); color: var(--ink); }
-    .filt.active { background: var(--ink); border-color: var(--ink); color: var(--cream); }
+    .f-btn:hover  { color: var(--text-1); border-color: var(--border-2); }
+    .f-btn.active { background: var(--text-1); color: var(--bg); border-color: var(--text-1); }
 
-    .bm-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+    .bm-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; }
     .bm-card {
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 10px; padding: 18px;
-      transition: all 0.15s; box-shadow: var(--shadow-sm);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 20px;
+      transition: all var(--t-normal); box-shadow: var(--shadow-xs);
     }
-    .bm-card:hover { transform: translateY(-1px); box-shadow: var(--shadow-md); border-color: var(--border-2); }
+    .bm-card:hover { box-shadow: var(--shadow-md); transform: translateY(-2px); border-color: var(--border-2); }
     .bm-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
-    .cat-badge {
-      font-size: 10px; font-weight: 700; letter-spacing: 0.04em;
-      text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
+    .cat-chip {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.05em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 5px;
     }
-    .cb-factual    { background: var(--sage-dim);  color: var(--sage);  }
-    .cb-reasoning  { background: var(--amber-dim); color: var(--amber); }
-    .cb-multi-hop  { background: rgba(120,113,108,0.08); color: var(--ink-3); }
-    .cb-adversarial{ background: var(--rose-dim);  color: var(--rose);  }
-    .cb-edge_case  { background: rgba(120,113,108,0.08); color: var(--ink-3); }
-    .cb-out_of_scope{ background: var(--cream-3); color: var(--ink-4); }
-    .pass-badge { font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
-    .pb-PASS { background: var(--sage-dim); color: var(--sage); }
-    .pb-FAIL { background: var(--rose-dim); color: var(--rose); }
-    .bm-q { font-size: 12px; color: var(--ink-2); line-height: 1.55; margin-bottom: 8px; font-weight: 500; }
-    .bm-diff { font-size: 10px; color: var(--ink-4); text-transform: uppercase; letter-spacing: 0.05em; font-weight: 700; }
+    .cc-f { background: var(--blue-bg);   color: var(--blue); }
+    .cc-r { background: var(--amber-bg);  color: var(--amber); }
+    .cc-m { background: var(--surface-3); color: var(--text-3); }
+    .cc-a { background: var(--red-bg);    color: var(--red); }
+    .cc-e { background: var(--surface-3); color: var(--text-3); }
+    .cc-o { background: var(--surface-2); color: var(--text-3); }
+    .pass-chip {
+      font-size: 10px; font-weight: 700; padding: 3px 8px; border-radius: 5px;
+    }
+    .pc-pass { background: var(--green-bg); color: var(--green); }
+    .pc-fail { background: var(--red-bg);   color: var(--red); }
+    .bm-q    { font-size: 13px; font-weight: 500; color: var(--text-1); line-height: 1.5; margin-bottom: 8px; }
+    .bm-diff { font-size: 11px; color: var(--text-3); font-weight: 500; }
 
-    /* ── CHARTS ── */
-    .charts-grid {
-      display: grid; grid-template-columns: 2fr 1fr; gap: 16px; margin-top: 44px;
-    }
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       CHARTS
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .charts-row { display: grid; grid-template-columns: 3fr 2fr; gap: 16px; margin-top: 48px; }
     .chart-card {
-      background: var(--white); border: 1px solid var(--border);
-      border-radius: 12px; padding: 24px;
-      box-shadow: var(--shadow-sm);
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--r-lg); padding: 28px;
+      box-shadow: var(--shadow-xs);
     }
-    .chart-label { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 4px; }
-    .chart-sub   { font-size: 11px; color: var(--ink-4); margin-bottom: 20px; }
+    .chart-title { font-size: 14px; font-weight: 600; color: var(--text-1); margin-bottom: 4px; }
+    .chart-desc  { font-size: 12px; color: var(--text-3); margin-bottom: 24px; }
 
-    /* ── FOOTER ── */
-    footer {
-      border-top: 1px solid var(--border);
-      padding: 36px 0; text-align: center;
-      color: var(--ink-4); font-size: 12px;
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       FOOTER
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 28px 0; border-top: 1px solid var(--border);
     }
-    footer a { color: var(--ink-3); text-decoration: none; }
-    footer a:hover { color: var(--ink); }
+    .footer-left { font-size: 13px; color: var(--text-3); }
+    .footer-right { display: flex; gap: 24px; }
+    .footer-right a { font-size: 13px; color: var(--text-3); text-decoration: none; transition: color var(--t-fast); }
+    .footer-right a:hover { color: var(--text-1); }
 
-    /* ── RESPONSIVE ── */
-    @media (max-width: 900px) {
-      .kpi-strip { grid-template-columns: repeat(2,1fr); }
-      .pipeline  { grid-template-columns: repeat(2,1fr); }
-      .output-grid { grid-template-columns: 1fr; }
-      .bm-grid   { grid-template-columns: repeat(2,1fr); }
-      .charts-grid { grid-template-columns: 1fr; }
-      .nav-links { display: none; }
+    /* ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+       RESPONSIVE
+    ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ */
+    @media (max-width: 960px) {
+      .metrics-strip { grid-template-columns: repeat(2,1fr); }
+      .pipeline-grid { grid-template-columns: repeat(2,1fr); }
+      .sb-output     { grid-template-columns: 1fr; }
+      .sb-panel:first-child { border-right: none; }
+      .bm-grid       { grid-template-columns: repeat(2,1fr); }
+      .charts-row    { grid-template-columns: 1fr; }
+      nav .nav-menu a:not(.nav-cta) { display: none; }
     }
     @media (max-width: 560px) {
-      .bm-grid  { grid-template-columns: 1fr; }
-      .kpi-strip { grid-template-columns: repeat(2,1fr); }
-      .pipeline  { grid-template-columns: 1fr 1fr; }
+      .container  { padding: 0 20px; }
+      .metrics-strip { grid-template-columns: repeat(2,1fr); }
+      .bm-grid    { grid-template-columns: 1fr; }
+      .pipeline-grid { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
 <body>
 
-<!-- ── NAV ── -->
-<nav class="z1">
-  <div class="wrap nav-inner">
-    <a class="logo" href="#">
-      <div class="logo-mark">🧪</div>
-      <span class="logo-name">LLM-Litmus</span>
-      <span class="logo-version">v1.3.0</span>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     NAVIGATION
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<nav>
+  <div class="container nav-inner">
+    <a class="logo-wrap" href="#">
+      <div class="logo-icon">⚗</div>
+      <span class="logo-text">LLM-Litmus</span>
+      <span class="logo-badge">v1.3.0</span>
     </a>
 
-    <div class="nav-links">
-      <a href="#how-it-works">How It Works</a>
-      <a href="#sandbox">Sandbox</a>
-      <a href="#benchmarks">Benchmarks</a>
-      <a href="#analytics">Analytics</a>
+    <div class="nav-menu">
+      <a href="#how-it-works" class="nav-link">How it works</a>
+      <a href="#sandbox"      class="nav-link">Sandbox</a>
+      <a href="#benchmarks"   class="nav-link">Benchmarks</a>
+      <a href="#analytics"    class="nav-link">Analytics</a>
+      <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" class="nav-cta">
+        <i data-lucide="github" style="width:13px;height:13px;stroke-width:2;"></i>
+        GitHub
+      </a>
     </div>
-
-    <a class="btn-gh" href="https://github.com/ps-keerthana/llm-litmus" target="_blank">
-      <svg width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.165 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.528 2.341 1.087 2.91.831.092-.647.35-1.087.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.836a9.57 9.57 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
-      GitHub
-    </a>
   </div>
 </nav>
 
-<!-- ── HERO ── -->
-<section class="z1">
-  <div class="wrap hero">
-    <div class="hero-eyebrow">
-      <span class="eyebrow-dot"></span>
-      <span>Benchmark passed · 83.3% accuracy · 204 test cases</span>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     HERO
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="container">
+  <div class="hero">
+    <div class="hero-label">
+      <span class="status-dot"></span>
+      Benchmark passed · 83.3% accuracy · 204 queries
     </div>
 
-    <h1 class="hero-title serif">
-      Stop Guessing If Your<br />
-      <em>RAG Pipeline</em> Actually Works
-    </h1>
+    <h1 class="hero-title">Know exactly where<br/>your RAG pipeline fails</h1>
 
-    <p class="hero-sub">
-      LLM-Litmus automatically evaluates AI tax assistants across 204 expert-authored test cases — measuring accuracy, hallucination rate, retrieval precision, and latency inside a single CI pipeline.
+    <p class="hero-desc">
+      LLM-Litmus benchmarks AI assistants against 204 expert-authored test cases — measuring accuracy, hallucination, retrieval precision, and latency. All in one automated CI pipeline.
     </p>
 
-    <div class="hero-ctas">
-      <a href="#sandbox" class="btn-primary">Try Live Sandbox →</a>
-      <a href="https://github.com/ps-keerthana/llm-litmus" class="btn-outline" target="_blank">View Source Code</a>
+    <div class="hero-actions">
+      <a href="#sandbox" class="btn-primary">
+        <i data-lucide="play" style="width:14px;height:14px;stroke-width:2.5;"></i>
+        Try the sandbox
+      </a>
+      <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" class="btn-secondary">
+        <i data-lucide="github" style="width:14px;height:14px;stroke-width:1.8;"></i>
+        View source
+      </a>
     </div>
 
-    <div class="kpi-strip">
-      <div class="kpi-cell">
-        <div class="kpi-label">Pass Rate</div>
-        <div class="kpi-value">83.3%</div>
-        <div class="kpi-note kpi-up">↑ +11.2 pp vs baseline</div>
+    <div class="metrics-strip">
+      <div class="metric-cell">
+        <div class="metric-label">Pass Rate</div>
+        <div class="metric-value">83.3%</div>
+        <div class="metric-sub metric-up">↑ +11.2 pp from baseline</div>
       </div>
-      <div class="kpi-cell">
-        <div class="kpi-label">Retrieval Hit Rate</div>
-        <div class="kpi-value">97.5%</div>
-        <div class="kpi-note">Top-5 ChromaDB chunks</div>
+      <div class="metric-cell">
+        <div class="metric-label">Retrieval Hit Rate</div>
+        <div class="metric-value">97.5%</div>
+        <div class="metric-sub">Top-5 ChromaDB recall</div>
       </div>
-      <div class="kpi-cell">
-        <div class="kpi-label">MRR Score</div>
-        <div class="kpi-value">0.913</div>
-        <div class="kpi-note">Mean Reciprocal Rank</div>
+      <div class="metric-cell">
+        <div class="metric-label">MRR Score</div>
+        <div class="metric-value">0.913</div>
+        <div class="metric-sub">Mean reciprocal rank</div>
       </div>
-      <div class="kpi-cell">
-        <div class="kpi-label">Test Suite</div>
-        <div class="kpi-value">204</div>
-        <div class="kpi-note">7 query categories</div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<div class="divider z1"></div>
-
-<!-- ── HOW IT WORKS ── -->
-<section id="how-it-works" class="z1">
-  <div class="wrap">
-    <div class="section-eyebrow">Architecture</div>
-    <h2 class="section-title serif">The 4-Step Evaluation Loop</h2>
-    <p class="section-sub">From raw tax documents to a graded AI answer — fully automated, zero manual review required.</p>
-
-    <div class="pipeline">
-      <div class="pipe-step" id="step-0" onclick="activateStep(0)">
-        <div class="pipe-num">01</div>
-        <div class="pipe-emoji">📄</div>
-        <div class="pipe-title">Document Ingestion</div>
-        <div class="pipe-desc">8 official Indian tax guides — Sec 80C, 80D, Section 24b, HRA, TDS, NPS, Capital Gains — split into 49 semantic chunks and stored in ChromaDB.</div>
-      </div>
-      <div class="pipe-step" id="step-1" onclick="activateStep(1)">
-        <div class="pipe-num">02</div>
-        <div class="pipe-emoji">🔍</div>
-        <div class="pipe-title">Vector Retrieval (k=5)</div>
-        <div class="pipe-desc">Each query is encoded via <span class="mono" style="font-size:11px;">all-MiniLM-L6-v2</span> embeddings. The 5 most semantically relevant chunks are retrieved.</div>
-      </div>
-      <div class="pipe-step" id="step-2" onclick="activateStep(2)">
-        <div class="pipe-num">03</div>
-        <div class="pipe-emoji">🤖</div>
-        <div class="pipe-title">LLM Answer Synthesis</div>
-        <div class="pipe-desc">Llama 3.3 70B via Groq (remote) or Llama 3.2 1B via Ollama (local) generates a precise answer strictly grounded in retrieved context.</div>
-      </div>
-      <div class="pipe-step" id="step-3" onclick="activateStep(3)">
-        <div class="pipe-num">04</div>
-        <div class="pipe-emoji">⚖️</div>
-        <div class="pipe-title">Automated Quality Gate</div>
-        <div class="pipe-desc">Answers are scored on semantic similarity, faithfulness, and hallucination. CI blocks merges below 70% pass rate automatically.</div>
+      <div class="metric-cell">
+        <div class="metric-label">Test Suite</div>
+        <div class="metric-value">204</div>
+        <div class="metric-sub">7 query categories</div>
       </div>
     </div>
   </div>
-</section>
+</div>
 
-<div class="divider z1"></div>
+<hr class="divider" />
 
-<!-- ── SANDBOX ── -->
-<section id="sandbox" class="z1">
-  <div class="wrap">
-    <div class="section-eyebrow">Interactive Demo</div>
-    <h2 class="section-title serif">Live Tax Query Sandbox</h2>
-    <p class="section-sub">Run any income tax question and watch the RAG pipeline retrieve chunks and generate an answer — with a real streaming output below.</p>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     HOW IT WORKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="how-it-works">
+  <div class="container section">
+    <div class="section-kicker">Architecture</div>
+    <h2 class="section-heading">The evaluation loop</h2>
+    <p class="section-body">Every query travels through a four-stage automated pipeline — from document retrieval to final verdict — with no human intervention.</p>
 
-    <div class="sandbox-wrap">
-      <!-- Mac-style title bar -->
-      <div class="sandbox-bar">
-        <div class="sandbox-dots">
-          <div class="dot-w" style="background:#f87171;"></div>
-          <div class="dot-w" style="background:#fbbf24;"></div>
-          <div class="dot-w" style="background:#4ade80;"></div>
+    <div class="pipeline-grid">
+      <div class="step-card" id="step-0" onclick="toggleStep(0)">
+        <div class="step-icon-wrap">
+          <i data-lucide="file-text"></i>
         </div>
-        <div class="live-tag">
-          <span class="live-blink"></span>
-          <span>RAG Pipeline · llama-3.3-70b-versatile</span>
+        <div class="step-num">Step 01</div>
+        <div class="step-title">Document ingestion</div>
+        <div class="step-desc">8 official Indian tax guides split into 49 semantic chunks and indexed in ChromaDB with MiniLM-L6-v2 embeddings.</div>
+      </div>
+      <div class="step-card" id="step-1" onclick="toggleStep(1)">
+        <div class="step-icon-wrap">
+          <i data-lucide="search"></i>
         </div>
-        <div class="sample-pills">
-          <button class="pill active" id="pill-0" onclick="loadSample(0)">80C New Regime</button>
-          <button class="pill" id="pill-1" onclick="loadSample(1)">TDS 194J</button>
-          <button class="pill" id="pill-2" onclick="loadSample(2)">Home Loan 24b</button>
-          <button class="pill" id="pill-3" onclick="loadSample(3)">NPS 80CCD</button>
+        <div class="step-num">Step 02</div>
+        <div class="step-title">Vector retrieval</div>
+        <div class="step-desc">Each query is embedded and matched against the vector store. Top-5 most semantically relevant chunks are retrieved.</div>
+      </div>
+      <div class="step-card" id="step-2" onclick="toggleStep(2)">
+        <div class="step-icon-wrap">
+          <i data-lucide="cpu"></i>
         </div>
+        <div class="step-num">Step 03</div>
+        <div class="step-title">Answer synthesis</div>
+        <div class="step-desc">Llama 3.3 70B (Groq) or Llama 3.2 1B (Ollama) generates a grounded answer strictly from retrieved context.</div>
+      </div>
+      <div class="step-card" id="step-3" onclick="toggleStep(3)">
+        <div class="step-icon-wrap">
+          <i data-lucide="shield-check"></i>
+        </div>
+        <div class="step-num">Step 04</div>
+        <div class="step-title">Quality gate</div>
+        <div class="step-desc">Answers are scored on semantic similarity, faithfulness, and hallucination rate. CI blocks merges below 70% pass rate.</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<hr class="divider" />
+
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     LIVE SANDBOX
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="sandbox">
+  <div class="container section">
+    <div class="section-kicker">Interactive demo</div>
+    <h2 class="section-heading">Live query sandbox</h2>
+    <p class="section-body">Type any income tax question. Watch the RAG pipeline retrieve context, stream the answer, and show similarity scores — all inline.</p>
+
+    <div class="sandbox">
+      <!-- Window Chrome -->
+      <div class="sb-chrome">
+        <div class="sb-dots">
+          <div class="sb-dot d-red"></div>
+          <div class="sb-dot d-yellow"></div>
+          <div class="sb-dot d-green"></div>
+        </div>
+        <span class="sb-title">RAG Pipeline · llama-3.3-70b-versatile · Groq</span>
+        <span class="sb-status">
+          <span class="live-dot"></span>
+          Live
+        </span>
       </div>
 
-      <!-- Body -->
-      <div class="sandbox-body">
-        <div class="query-row">
-          <input class="query-input" id="queryInput" type="text"
+      <!-- Sample Tabs -->
+      <div class="sb-tabs">
+        <div class="sb-tab active" id="tab-0" onclick="loadSample(0)">80C &amp; New Regime</div>
+        <div class="sb-tab" id="tab-1" onclick="loadSample(1)">TDS Section 194J</div>
+        <div class="sb-tab" id="tab-2" onclick="loadSample(2)">Home Loan 24(b)</div>
+        <div class="sb-tab" id="tab-3" onclick="loadSample(3)">NPS 80CCD(1B)</div>
+        <div class="sb-tab" id="tab-4" onclick="loadSample(4)">Capital Gains</div>
+      </div>
+
+      <!-- Input Area -->
+      <div class="sb-input-area">
+        <div class="sb-input-row">
+          <input class="sb-input" id="queryInput" type="text"
             value="Can I claim Section 80C deduction under the new tax regime?"
-            placeholder="Type an income tax question and press Enter…" />
-          <button class="run-btn" id="runBtn" onclick="runQuery()">
-            <span id="runIcon">→</span>
-            <span id="runText">Run Query</span>
+            placeholder="Ask an income tax question and press Enter…" />
+          <button class="sb-run" id="runBtn" onclick="runQuery()">
+            <i data-lucide="arrow-right" id="runIcon"></i>
+            <span id="runText">Run</span>
           </button>
         </div>
+      </div>
 
-        <div class="status-row" id="statusRow" style="display:none;">
-          <span class="chip chip-neutral"><span class="chip-dot dot-stone"></span><span id="chipR">Vector search complete</span></span>
-          <span class="chip chip-pass"><span class="chip-dot dot-sage"></span><span id="chipS">PASS · Similarity 0.891</span></span>
-          <span class="chip chip-neutral"><span class="chip-dot dot-stone"></span><span id="chipL">Latency 1.34 s</span></span>
-        </div>
+      <!-- Status Bar -->
+      <div class="sb-statusbar" id="statusBar">
+        <span class="status-pill pill-blue"><span class="pill-dot pd-blue"></span><span id="chipR">Retrieving…</span></span>
+        <span class="status-pill pill-green"><span class="pill-dot pd-green"></span><span id="chipS">—</span></span>
+        <span class="status-pill pill-muted"><span class="pill-dot pd-gray"></span><span id="chipL">—</span></span>
+      </div>
 
-        <div class="output-grid">
-          <div class="output-panel">
-            <div class="op-head">
-              <span class="op-label label-sage">Generated Answer</span>
-              <span class="op-meta mono" id="ansModel">llama-3.3-70b</span>
-            </div>
-            <div class="op-body">
-              <p class="answer-text" id="answerText">
-                No, Section 80C deductions — PPF, ELSS, EPF, Life Insurance premiums — are <strong>not available</strong> under the new tax regime. Under FY 2024-25, most deductions under Chapter VI-A are excluded, except employer NPS contributions (Section 80CCD(2)) and the ₹50,000 standard deduction for salaried employees.
-              </p>
-            </div>
+      <!-- Output Panels -->
+      <div class="sb-output">
+        <div class="sb-panel">
+          <div class="panel-header">
+            <span class="panel-label green">
+              <i data-lucide="message-circle" style="width:13px;height:13px;stroke-width:2;color:var(--green);"></i>
+              Generated answer
+            </span>
+            <span class="panel-meta" id="ansModel">llama-3.3-70b</span>
           </div>
-
-          <div class="output-panel">
-            <div class="op-head">
-              <span class="op-label label-amber">Retrieved Chunks</span>
-              <span class="op-meta">Top-5 · ChromaDB</span>
-            </div>
-            <div class="op-body" id="chunksBody">
-              <div class="chunk-card">
-                <div class="ch-src">docs/section_80c_deductions.txt · chunk 2</div>
-                <div class="ch-text">Section 80C allows deductions up to ₹1,50,000. These deductions are NOT available under the New Tax Regime from FY 2023-24 onwards.</div>
-                <div class="sim-bar">
-                  <div class="sim-track"><div class="sim-fill" style="width:94.2%"></div></div>
-                  <span class="sim-val">0.942</span>
-                </div>
+          <div class="panel-body">
+            <p class="answer-text" id="answerText">
+              No, Section 80C deductions — PPF, ELSS, EPF, life insurance premiums — are <strong>not available</strong> under the new tax regime. Under FY 2024-25, most Chapter VI-A deductions are excluded, with exceptions for employer NPS contributions under Section 80CCD(2) and the ₹50,000 standard deduction for salaried employees.
+            </p>
+          </div>
+        </div>
+        <div class="sb-panel">
+          <div class="panel-header">
+            <span class="panel-label muted">
+              <i data-lucide="layers" style="width:13px;height:13px;stroke-width:2;"></i>
+              Retrieved context
+            </span>
+            <span class="panel-meta">Top-5 · ChromaDB</span>
+          </div>
+          <div class="panel-body" id="chunksBody">
+            <div class="chunk-item">
+              <div class="chunk-src top">docs/section_80c_deductions.txt · chunk 2</div>
+              <div class="chunk-text">Section 80C allows deductions up to ₹1,50,000. These deductions are NOT available under the New Tax Regime from FY 2023-24 onwards.</div>
+              <div class="sim-row">
+                <div class="sim-track"><div class="sim-fill" style="width:94.2%"></div></div>
+                <span class="sim-score">0.942</span>
               </div>
-              <div class="chunk-card">
-                <div class="ch-src">docs/income_tax_basics.txt · chunk 4</div>
-                <div class="ch-text">Under the new regime, deductions like 80C, 80D, and HRA exemption are NOT available. 87A rebate applies to income up to ₹7 lakh.</div>
-                <div class="sim-bar">
-                  <div class="sim-track"><div class="sim-fill" style="width:88.7%"></div></div>
-                  <span class="sim-val">0.887</span>
-                </div>
+            </div>
+            <div class="chunk-item">
+              <div class="chunk-src">docs/income_tax_basics.txt · chunk 4</div>
+              <div class="chunk-text">Under the new regime, deductions like 80C, 80D, and HRA are NOT available. The 87A rebate applies up to ₹7 lakh income.</div>
+              <div class="sim-row">
+                <div class="sim-track"><div class="sim-fill" style="width:88.7%"></div></div>
+                <span class="sim-score">0.887</span>
               </div>
             </div>
           </div>
@@ -620,274 +735,313 @@
       </div>
     </div>
   </div>
-</section>
+</div>
 
-<div class="divider z1"></div>
+<hr class="divider" />
 
-<!-- ── BENCHMARKS ── -->
-<section id="benchmarks" class="z1">
-  <div class="wrap">
-    <div class="section-eyebrow">Benchmark Suite</div>
-    <h2 class="section-title serif">204 Expert-Curated Test Cases</h2>
-    <p class="section-sub">Ground-truth benchmarked queries across 7 reasoning categories and three difficulty levels.</p>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     BENCHMARKS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="benchmarks">
+  <div class="container section">
+    <div class="section-kicker">Benchmark suite</div>
+    <h2 class="section-heading">204 expert-curated test cases</h2>
+    <p class="section-body">Ground-truth benchmarks across seven reasoning categories and three difficulty levels.</p>
 
-    <div class="filter-bar">
-      <button class="filt active" onclick="filterBM('all',this)">All (204)</button>
-      <button class="filt" onclick="filterBM('factual',this)">Factual</button>
-      <button class="filt" onclick="filterBM('reasoning',this)">Reasoning</button>
-      <button class="filt" onclick="filterBM('multi-hop',this)">Multi-Hop</button>
-      <button class="filt" onclick="filterBM('adversarial',this)">Adversarial</button>
-      <button class="filt" onclick="filterBM('edge_case',this)">Edge Case</button>
-      <button class="filt" onclick="filterBM('out_of_scope',this)">Out-of-Scope</button>
+    <div class="filter-row" style="margin-top:36px;">
+      <button class="f-btn active" onclick="filterBM('all',this)">All (204)</button>
+      <button class="f-btn" onclick="filterBM('factual',this)">Factual</button>
+      <button class="f-btn" onclick="filterBM('reasoning',this)">Reasoning</button>
+      <button class="f-btn" onclick="filterBM('multi-hop',this)">Multi-hop</button>
+      <button class="f-btn" onclick="filterBM('adversarial',this)">Adversarial</button>
+      <button class="f-btn" onclick="filterBM('edge_case',this)">Edge case</button>
+      <button class="f-btn" onclick="filterBM('out_of_scope',this)">Out-of-scope</button>
     </div>
 
     <div class="bm-grid" id="bmGrid"></div>
   </div>
-</section>
+</div>
 
-<div class="divider z1"></div>
+<hr class="divider" />
 
-<!-- ── ANALYTICS ── -->
-<section id="analytics" class="z1">
-  <div class="wrap">
-    <div class="section-eyebrow">Analytics</div>
-    <h2 class="section-title serif">Performance Over Time</h2>
-    <p class="section-sub">Pass rate trajectory across 5 evaluation runs after RAG optimisations and prompt improvements.</p>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     ANALYTICS
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div id="analytics">
+  <div class="container section">
+    <div class="section-kicker">Analytics</div>
+    <h2 class="section-heading">Performance over time</h2>
+    <p class="section-body">Pass rate trajectory across evaluation runs after retrieval and prompt optimisations.</p>
 
-    <div class="charts-grid">
+    <div class="charts-row">
       <div class="chart-card">
-        <div class="chart-label">Pass Rate Trend (5 Runs)</div>
-        <div class="chart-sub">Baseline 65% → current 83.3% after top-k expansion and system prompt overhaul</div>
-        <canvas id="trendChart" height="155"></canvas>
+        <div class="chart-title">Pass rate trend</div>
+        <div class="chart-desc">65% baseline → 83.3% after top-k expansion, new system prompt, and knowledge base expansion</div>
+        <canvas id="trendChart" height="160"></canvas>
       </div>
       <div class="chart-card">
-        <div class="chart-label">Pass vs Fail Distribution</div>
-        <div class="chart-sub">Latest run: 170 passed, 34 failed (170 / 204)</div>
-        <canvas id="donutChart" height="155"></canvas>
+        <div class="chart-title">Latest run distribution</div>
+        <div class="chart-desc">170 passed · 34 failed</div>
+        <canvas id="donutChart" height="160"></canvas>
       </div>
     </div>
   </div>
-</section>
+</div>
 
-<!-- ── FOOTER ── -->
-<footer class="z1">
-  <div class="wrap">
-    <p>Built by <a href="https://github.com/ps-keerthana" target="_blank">@ps-keerthana</a> · Open Source ·
-      <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank">GitHub Repository</a>
-    </p>
-    <p style="margin-top:6px;color:var(--ink-4);">LLM-Litmus v1.3.0 · Llama 3.3 70B · ChromaDB · FastAPI · Streamlit</p>
+<!-- ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+     FOOTER
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━ -->
+<div class="container">
+  <div class="footer-inner">
+    <span class="footer-left">Built by @ps-keerthana · LLM-Litmus v1.3.0</span>
+    <div class="footer-right">
+      <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank">GitHub</a>
+      <a href="#how-it-works">Documentation</a>
+    </div>
   </div>
-</footer>
+</div>
 
 <script>
-// ── Sample Data ─────────────────────────────────────────
+/* ─── DATA ──────────────────────────────────────── */
 const SAMPLES = [
   {
-    q: "Can I claim Section 80C deduction under the new tax regime?",
-    ans: "No, Section 80C deductions — PPF, ELSS, EPF, Life Insurance premiums — are not available under the new tax regime. Under FY 2024-25, most deductions under Chapter VI-A are excluded, except employer NPS contributions (Section 80CCD(2)) and the ₹50,000 standard deduction for salaried employees.",
-    status:"PASS · Similarity 0.891", latency:"1.34 s",
+    q:"Can I claim Section 80C deduction under the new tax regime?",
+    ans:"No, Section 80C deductions — PPF, ELSS, EPF, life insurance premiums — are <strong>not available</strong> under the new tax regime. Under FY 2024-25, most Chapter VI-A deductions are excluded, with exceptions for employer NPS contributions under Section 80CCD(2) and the ₹50,000 standard deduction for salaried employees.",
+    status:"PASS · Similarity 0.891", latency:"1.34s",
     chunks:[
-      { src:"docs/section_80c_deductions.txt · chunk 2", text:"Section 80C allows deductions up to ₹1,50,000. These deductions are NOT available under the New Tax Regime from FY 2023-24 onwards.", sim:0.942 },
-      { src:"docs/income_tax_basics.txt · chunk 4", text:"Under the new regime, deductions like 80C, 80D, and HRA exemption are NOT available. 87A rebate applies to income up to ₹7 lakh.", sim:0.887 },
+      {src:"docs/section_80c_deductions.txt · chunk 2", text:"Section 80C allows deductions up to ₹1,50,000. These deductions are NOT available under the New Tax Regime from FY 2023-24 onwards.", sim:0.942, top:true},
+      {src:"docs/income_tax_basics.txt · chunk 4", text:"Under the new regime, deductions like 80C, 80D, and HRA are NOT available. The 87A rebate applies up to ₹7 lakh income.", sim:0.887, top:false},
     ]
   },
   {
-    q: "What is the TDS rate under Section 194J for professional fees?",
-    ans: "Under Section 194J, TDS is deducted at 10% on payments for professional services where the annual aggregate exceeds ₹30,000. For fees for technical services (excluding professional services), the rate is 2%. Professionals include lawyers, doctors, architects, accountants, and engineers.",
-    status:"PASS · Similarity 0.927", latency:"1.18 s",
+    q:"What is the TDS rate under Section 194J for professional fees?",
+    ans:"Under Section 194J, TDS is deducted at <strong>10%</strong> on professional service payments where the annual aggregate exceeds ₹30,000. For technical services (excluding professional services), the rate is <strong>2%</strong>. Professionals include lawyers, doctors, architects, accountants, and engineers.",
+    status:"PASS · Similarity 0.927", latency:"1.18s",
     chunks:[
-      { src:"docs/tds_rules.txt · chunk 3", text:"TDS at 10% is deducted on professional service payments exceeding ₹30,000. For technical services the rate is 2%.", sim:0.963 },
-      { src:"docs/tds_rules.txt · chunk 4", text:"Professionals include lawyers, doctors, architects, accountants, engineers, interior decorators and others notified by CBDT.", sim:0.891 },
+      {src:"docs/tds_rules.txt · chunk 3", text:"TDS at 10% is deducted on professional service payments exceeding ₹30,000. For technical services the rate is 2%.", sim:0.963, top:true},
+      {src:"docs/tds_rules.txt · chunk 4", text:"Professionals include lawyers, doctors, architects, accountants, engineers, interior decorators and others notified by CBDT.", sim:0.891, top:false},
     ]
   },
   {
-    q: "What is the maximum interest deduction on home loan under Section 24b?",
-    ans: "Under Section 24(b), interest on a home loan for a self-occupied property is deductible up to ₹2,00,000 per year, provided the construction or acquisition is completed within 5 years of the loan year. If construction takes longer, the cap drops to ₹30,000.",
-    status:"PASS · Similarity 0.916", latency:"1.21 s",
+    q:"What is the maximum interest deduction on home loan under Section 24(b)?",
+    ans:"Under Section 24(b), interest on a home loan for a <strong>self-occupied property</strong> is deductible up to <strong>₹2,00,000</strong> per year, provided construction or acquisition is completed within 5 years of the loan year. If construction exceeds 5 years, the cap drops to ₹30,000.",
+    status:"PASS · Similarity 0.916", latency:"1.21s",
     chunks:[
-      { src:"docs/home_loan_section_24b.txt · chunk 1", text:"Deduction on home loan interest for a self-occupied property is capped at ₹2,00,000 per financial year.", sim:0.951 },
-      { src:"docs/home_loan_section_24b.txt · chunk 2", text:"If construction takes longer than 5 years, the maximum deduction limit drops to ₹30,000 per year.", sim:0.879 },
+      {src:"docs/home_loan_section_24b.txt · chunk 1", text:"Deduction on home loan interest for a self-occupied property is capped at ₹2,00,000 per financial year.", sim:0.951, top:true},
+      {src:"docs/home_loan_section_24b.txt · chunk 2", text:"If construction takes longer than 5 years, the maximum deduction limit drops to ₹30,000 per year.", sim:0.879, top:false},
     ]
   },
   {
-    q: "Can I claim additional NPS deduction under Section 80CCD(1B)?",
-    ans: "Yes. Section 80CCD(1B) allows an additional deduction of up to ₹50,000 for voluntary Tier-I NPS contributions — over and above the ₹1,50,000 limit under Section 80C. Total self-contribution NPS tax benefit can therefore reach ₹2,00,000.",
-    status:"PASS · Similarity 0.903", latency:"1.09 s",
+    q:"Can I claim additional NPS deduction under Section 80CCD(1B)?",
+    ans:"Yes. Section 80CCD(1B) allows an additional deduction of up to <strong>₹50,000</strong> for voluntary Tier-I NPS contributions — over and above the ₹1,50,000 limit under Section 80C. Total self-contribution NPS tax benefit can therefore reach ₹2,00,000.",
+    status:"PASS · Similarity 0.903", latency:"1.09s",
     chunks:[
-      { src:"docs/nps_section_80ccd.txt · chunk 2", text:"Section 80CCD(1B) provides additional deduction up to ₹50,000 for Tier-I NPS contributions — over and above the ₹1.5 lakh 80C limit.", sim:0.972 },
-      { src:"docs/nps_section_80ccd.txt · chunk 1", text:"For salaried individuals, Section 80CCD(1) is limited to 10% of Salary (Basic+DA), subject to the ₹1,50,000 cap under 80CCE.", sim:0.844 },
+      {src:"docs/nps_section_80ccd.txt · chunk 2", text:"Section 80CCD(1B) provides additional deduction up to ₹50,000 for Tier-I NPS contributions — over and above the ₹1.5 lakh 80C limit.", sim:0.972, top:true},
+      {src:"docs/nps_section_80ccd.txt · chunk 1", text:"For salaried individuals, 80CCD(1) is limited to 10% of Salary (Basic+DA), subject to ₹1,50,000 cap under 80CCE.", sim:0.844, top:false},
+    ]
+  },
+  {
+    q:"How is Long-Term Capital Gain taxed on equity shares in India?",
+    ans:"Long-term capital gains (LTCG) from equity shares and equity mutual funds — held for more than <strong>12 months</strong> — are taxed at <strong>10%</strong> under Section 112A on gains exceeding ₹1,00,000 per financial year, without the benefit of indexation, provided Securities Transaction Tax (STT) was paid on both acquisition and transfer.",
+    status:"PASS · Similarity 0.934", latency:"1.15s",
+    chunks:[
+      {src:"docs/capital_gains_tax.txt · chunk 1", text:"Listed equity LTCG (Section 112A): Taxed at 10% on gains exceeding ₹1,00,000 per FY without indexation, provided STT is paid.", sim:0.967, top:true},
+      {src:"docs/capital_gains_tax.txt · chunk 2", text:"Equity shares and equity-oriented mutual funds held for more than 12 months qualify as long-term capital assets.", sim:0.891, top:false},
     ]
   }
 ];
 
-const BM_CARDS = [
-  { cat:"factual",    q:"What is the maximum deduction allowed under Section 80C?",                     diff:"easy",   pass:"PASS" },
-  { cat:"reasoning",  q:"If my salary is ₹12 lakh and investments are ₹1.5 lakh, what is my tax under the old regime?", diff:"medium", pass:"PASS" },
-  { cat:"multi-hop",  q:"Can a senior citizen claim both 80C and 80D? What is the combined limit?",     diff:"hard",   pass:"PASS" },
-  { cat:"adversarial",q:"Section 80C limit is ₹2 lakh, correct?",                                      diff:"medium", pass:"PASS" },
-  { cat:"edge_case",  q:"My LIC premium is ₹80,000 for a sum assured of ₹4 lakh. What is my 80C deduction?", diff:"hard", pass:"FAIL" },
-  { cat:"out_of_scope",q:"What is the best stock to invest in right now?",                              diff:"easy",   pass:"PASS" },
-  { cat:"factual",    q:"What is the TDS threshold for rent payments under Section 194-I?",             diff:"easy",   pass:"PASS" },
-  { cat:"reasoning",  q:"I sold equity shares after 14 months. What is the applicable tax rate?",       diff:"medium", pass:"PASS" },
-  { cat:"multi-hop",  q:"I have HRA exemption AND a home loan. Can I claim both Section 24b and HRA simultaneously?", diff:"hard", pass:"PASS" },
-  { cat:"adversarial",q:"Can NRIs claim HRA exemption under Section 10(13A)?",                          diff:"hard",   pass:"PASS" },
-  { cat:"factual",    q:"What is the basic exemption limit for senior citizens under the old regime?",  diff:"easy",   pass:"PASS" },
-  { cat:"edge_case",  q:"I sold my house 2 years and 1 month after purchase. Is this LTCG or STCG?",   diff:"medium", pass:"PASS" },
+const BM_DATA = [
+  {cat:"factual",    q:"What is the maximum deduction under Section 80C?",                                diff:"easy",   pass:"PASS"},
+  {cat:"reasoning",  q:"Salary ₹12L, investments ₹1.5L — what is the tax liability under old regime?",  diff:"medium", pass:"PASS"},
+  {cat:"multi-hop",  q:"Can a senior citizen claim both 80C and 80D? What is the combined limit?",       diff:"hard",   pass:"PASS"},
+  {cat:"adversarial",q:"The Section 80C limit is ₹2 lakh, correct?",                                     diff:"medium", pass:"PASS"},
+  {cat:"edge_case",  q:"LIC premium ₹80,000 for sum assured ₹4 lakh — what is the 80C deduction?",      diff:"hard",   pass:"FAIL"},
+  {cat:"out_of_scope",q:"Which stock should I buy to maximise returns this year?",                        diff:"easy",   pass:"PASS"},
+  {cat:"factual",    q:"What is the TDS threshold for rent payments under Section 194-I?",               diff:"easy",   pass:"PASS"},
+  {cat:"reasoning",  q:"I sold equity shares after 14 months. What tax rate applies?",                   diff:"medium", pass:"PASS"},
+  {cat:"multi-hop",  q:"I have HRA and a home loan. Can I claim both Section 24b interest and HRA?",     diff:"hard",   pass:"PASS"},
+  {cat:"adversarial",q:"Can NRIs claim HRA exemption under Section 10(13A)?",                            diff:"hard",   pass:"PASS"},
+  {cat:"factual",    q:"Basic exemption limit for senior citizens under old regime?",                    diff:"easy",   pass:"PASS"},
+  {cat:"edge_case",  q:"I sold my house 2 years and 1 month after purchase — LTCG or STCG?",            diff:"medium", pass:"PASS"},
 ];
 
-// ── Benchmark Filter ────────────────────────────────────
-function renderBM(f) {
-  const items = f==='all' ? BM_CARDS : BM_CARDS.filter(c=>c.cat===f);
+/* ─── PIPELINE STEPS ─────────────────────────────── */
+function toggleStep(idx) {
+  for(let i=0;i<4;i++) {
+    const el=document.getElementById(`step-${i}`);
+    el.classList.toggle('active', i===idx && !el.classList.contains('active'));
+  }
+}
+
+/* ─── BENCHMARK FILTER ───────────────────────────── */
+const catClass = {factual:'cc-f',reasoning:'cc-r','multi-hop':'cc-m',adversarial:'cc-a',edge_case:'cc-e',out_of_scope:'cc-o'};
+function renderBM(filter) {
+  const items = filter==='all' ? BM_DATA : BM_DATA.filter(c=>c.cat===filter);
   document.getElementById('bmGrid').innerHTML = items.map(c=>`
     <div class="bm-card">
       <div class="bm-top">
-        <span class="cat-badge cb-${c.cat}">${c.cat.replace('_',' ')}</span>
-        <span class="pass-badge pb-${c.pass}">${c.pass}</span>
+        <span class="cat-chip ${catClass[c.cat]||'cc-o'}">${c.cat.replace('_',' ')}</span>
+        <span class="pass-chip ${c.pass==='PASS'?'pc-pass':'pc-fail'}">${c.pass}</span>
       </div>
       <div class="bm-q">${c.q}</div>
-      <div class="bm-diff">· ${c.diff}</div>
+      <div class="bm-diff">${c.diff} difficulty</div>
     </div>`).join('');
 }
 function filterBM(f, btn) {
-  document.querySelectorAll('.filt').forEach(b=>b.classList.remove('active'));
-  btn.classList.add('active');
-  renderBM(f);
+  document.querySelectorAll('.f-btn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active'); renderBM(f);
 }
 renderBM('all');
 
-// ── Pipeline Step Highlight ─────────────────────────────
-function activateStep(idx) {
-  for(let i=0;i<4;i++) document.getElementById(`step-${i}`).classList.toggle('active', i===idx);
-}
-
-// ── Sample Loader ───────────────────────────────────────
+/* ─── SAMPLE TABS ────────────────────────────────── */
 function loadSample(idx) {
-  document.querySelectorAll('.pill').forEach((p,i)=>p.classList.toggle('active',i===idx));
+  document.querySelectorAll('.sb-tab').forEach((t,i)=>t.classList.toggle('active',i===idx));
   document.getElementById('queryInput').value = SAMPLES[idx].q;
-  renderResult(SAMPLES[idx]);
+  displayResult(SAMPLES[idx]);
 }
 
-function renderResult(s) {
-  document.getElementById('statusRow').style.display = 'flex';
+function chunkHTML(c) {
+  return `<div class="chunk-item">
+    <div class="chunk-src ${c.top?'top':''}">${c.src}</div>
+    <div class="chunk-text">${c.text}</div>
+    <div class="sim-row">
+      <div class="sim-track"><div class="sim-fill" style="width:${c.sim*100}%"></div></div>
+      <span class="sim-score">${c.sim.toFixed(3)}</span>
+    </div>
+  </div>`;
+}
+
+function displayResult(s) {
+  document.getElementById('statusBar').style.display = 'flex';
   document.getElementById('chipR').textContent = `${s.chunks.length} chunks retrieved`;
   document.getElementById('chipS').textContent = s.status;
   document.getElementById('chipL').textContent = `Latency ${s.latency}`;
   document.getElementById('answerText').innerHTML = s.ans;
-  document.getElementById('chunksBody').innerHTML = s.chunks.map(c=>`
-    <div class="chunk-card">
-      <div class="ch-src">${c.src}</div>
-      <div class="ch-text">${c.text}</div>
-      <div class="sim-bar">
-        <div class="sim-track"><div class="sim-fill" style="width:${c.sim*100}%"></div></div>
-        <span class="sim-val">${c.sim.toFixed(3)}</span>
-      </div>
-    </div>`).join('');
+  document.getElementById('chunksBody').innerHTML = s.chunks.map(chunkHTML).join('');
 }
 
-// ── Run Query with Typewriter ───────────────────────────
+/* ─── RUN QUERY ──────────────────────────────────── */
 function runQuery() {
   const q = document.getElementById('queryInput').value.trim();
-  if (!q) return;
-  let s = SAMPLES.find(x=>x.q.trim().toLowerCase()===q.toLowerCase()) || {...SAMPLES[0], q};
+  if(!q) return;
+  const s = SAMPLES.find(x=>x.q.toLowerCase()===q.toLowerCase()) || {...SAMPLES[0], q};
 
-  const btn = document.getElementById('runBtn');
-  const icon = document.getElementById('runIcon');
-  const txt  = document.getElementById('runText');
-  btn.disabled = true;
-  icon.innerHTML = '<div class="spinner"></div>';
-  txt.textContent = 'Running…';
+  const btn=document.getElementById('runBtn');
+  const icon=document.getElementById('runIcon');
+  const txt=document.getElementById('runText');
 
-  document.getElementById('statusRow').style.display = 'flex';
-  document.getElementById('chipR').textContent = 'Embedding query…';
-  document.getElementById('chipS').textContent = 'Retrieving context…';
-  document.getElementById('chipL').textContent = 'Generating…';
-  document.getElementById('answerText').innerHTML = '<span class="tcursor"></span>';
-  document.getElementById('chunksBody').innerHTML = '<p style="font-size:12px;color:var(--ink-4);padding:4px 0;">Searching vector store…</p>';
+  btn.disabled=true;
+  icon.setAttribute('data-lucide','loader-circle');
+  icon.className='spin-icon';
+  lucide.createIcons();
+  txt.textContent='Running';
 
+  const bar=document.getElementById('statusBar');
+  bar.style.display='flex';
+  document.getElementById('chipR').textContent='Embedding query…';
+  document.getElementById('chipS').textContent='—';
+  document.getElementById('chipL').textContent='—';
+
+  // Skeleton
+  document.getElementById('answerText').innerHTML='<div class="skeleton" style="height:14px;margin-bottom:8px;"></div><div class="skeleton" style="height:14px;width:85%;margin-bottom:8px;"></div><div class="skeleton" style="height:14px;width:60%;"></div>';
+  document.getElementById('chunksBody').innerHTML='<div class="skeleton" style="height:80px;margin-bottom:10px;border-radius:10px;"></div><div class="skeleton" style="height:70px;border-radius:10px;"></div>';
+
+  // Phase 1: chunks arrive
   setTimeout(()=>{
-    document.getElementById('chipR').textContent = `${s.chunks.length} chunks retrieved`;
-    document.getElementById('chunksBody').innerHTML = s.chunks.map(c=>`
-      <div class="chunk-card">
-        <div class="ch-src">${c.src}</div>
-        <div class="ch-text">${c.text}</div>
-        <div class="sim-bar">
-          <div class="sim-track"><div class="sim-fill" style="width:0"></div></div>
-          <span class="sim-val">${c.sim.toFixed(3)}</span>
-        </div>
-      </div>`).join('');
+    document.getElementById('chipR').textContent=`${s.chunks.length} chunks retrieved`;
+    document.getElementById('chunksBody').innerHTML = s.chunks.map(c=>`<div class="chunk-item">
+      <div class="chunk-src ${c.top?'top':''}">${c.src}</div>
+      <div class="chunk-text">${c.text}</div>
+      <div class="sim-row">
+        <div class="sim-track"><div class="sim-fill" style="width:0"></div></div>
+        <span class="sim-score">${c.sim.toFixed(3)}</span>
+      </div>
+    </div>`).join('');
     setTimeout(()=>{
       document.querySelectorAll('.sim-fill').forEach((el,i)=>{
-        el.style.width = (s.chunks[i]?.sim||0)*100+'%';
+        el.style.width=(s.chunks[i]?.sim||0)*100+'%';
       });
-    }, 60);
-  }, 600);
+    },60);
+  }, 700);
 
+  // Phase 2: typewriter
   setTimeout(()=>{
-    document.getElementById('chipS').textContent = 'LLM generating…';
-  }, 1100);
-
-  setTimeout(()=>{
-    const el = document.getElementById('answerText');
-    el.innerHTML=''; let i=0;
-    const full = s.ans;
-    const iv = setInterval(()=>{
-      if(i<full.length){
-        el.innerHTML = full.slice(0,++i)+'<span class="tcursor"></span>';
+    document.getElementById('chipS').textContent='Generating…';
+    const el=document.getElementById('answerText');
+    el.innerHTML='';
+    const plain=s.ans.replace(/<[^>]+>/g,'');
+    let i=0;
+    const iv=setInterval(()=>{
+      if(i<plain.length){
+        el.innerHTML=plain.slice(0,++i)+'<span class="cursor-blink"></span>';
       } else {
-        el.innerHTML = full;
+        el.innerHTML=s.ans;
         clearInterval(iv);
-        document.getElementById('chipS').textContent = s.status;
-        document.getElementById('chipL').textContent = 'Latency '+s.latency;
-        btn.disabled=false; icon.innerHTML='→'; txt.textContent='Run Query';
+        document.getElementById('chipS').textContent=s.status;
+        document.getElementById('chipL').textContent=`Latency ${s.latency}`;
+        btn.disabled=false;
+        icon.className='';
+        icon.setAttribute('data-lucide','arrow-right');
+        lucide.createIcons();
+        txt.textContent='Run';
       }
-    }, 11);
-  }, 1700);
+    },10);
+  }, 1500);
 }
 
-document.getElementById('queryInput').addEventListener('keydown', e=>{ if(e.key==='Enter') runQuery(); });
+document.getElementById('queryInput').addEventListener('keydown',e=>{if(e.key==='Enter')runQuery();});
 
-// ── Charts ──────────────────────────────────────────────
-Chart.defaults.font.family = "'DM Sans', sans-serif";
+/* ─── CHARTS ──────────────────────────────────────── */
+Chart.defaults.font.family="'Inter',sans-serif";
+Chart.defaults.color='#9CA3AF';
 
-new Chart(document.getElementById('trendChart'), {
-  type: 'line',
-  data: {
-    labels: ['Run 1', 'Run 2', 'Run 3', 'Run 4', 'Run 5'],
-    datasets: [{
-      data: [65.0, 71.5, 72.1, 78.0, 83.3],
-      borderColor: '#3d6b61',
-      backgroundColor: 'rgba(61,107,97,0.06)',
-      borderWidth: 2.5, fill: true, tension: 0.4,
-      pointBackgroundColor: '#3d6b61', pointRadius: 4, pointHoverRadius: 6,
+new Chart(document.getElementById('trendChart'),{
+  type:'line',
+  data:{
+    labels:['Run 1','Run 2','Run 3','Run 4','Run 5 (current)'],
+    datasets:[{
+      data:[65.0,71.5,72.1,78.0,83.3],
+      borderColor:'#4F6EF7',
+      backgroundColor:'rgba(79,110,247,0.06)',
+      borderWidth:2, fill:true, tension:0.4,
+      pointBackgroundColor:'#4F6EF7',
+      pointRadius:4, pointHoverRadius:6,
     }]
   },
-  options: {
-    responsive: true,
-    plugins: { legend: { display:false } },
-    scales: {
-      x: { grid:{ color:'rgba(28,25,23,0.05)' }, ticks:{ color:'#a8a29e', font:{size:11} } },
-      y: { grid:{ color:'rgba(28,25,23,0.05)' }, ticks:{ color:'#a8a29e', font:{size:11} }, min:55, max:95 }
+  options:{
+    responsive:true,
+    plugins:{legend:{display:false}},
+    scales:{
+      x:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:11}}},
+      y:{grid:{color:'rgba(0,0,0,0.04)'},ticks:{font:{size:11}},min:55,max:95}
     }
   }
 });
 
-new Chart(document.getElementById('donutChart'), {
-  type: 'doughnut',
-  data: {
-    labels: ['Passed (170)', 'Failed (34)'],
-    datasets: [{
-      data: [170, 34],
-      backgroundColor: ['#3d6b61','#b45309'],
-      borderWidth: 0, hoverOffset: 5,
+new Chart(document.getElementById('donutChart'),{
+  type:'doughnut',
+  data:{
+    labels:['Passed (170)','Failed (34)'],
+    datasets:[{
+      data:[170,34],
+      backgroundColor:['#4F6EF7','#E5E7EB'],
+      borderWidth:0, hoverOffset:4,
     }]
   },
-  options: {
-    responsive: true, cutout: '70%',
-    plugins: {
-      legend: { display:true, position:'bottom', labels:{ color:'#78716c', font:{size:11}, boxWidth:12, padding:16 } }
+  options:{
+    responsive:true, cutout:'72%',
+    plugins:{
+      legend:{
+        display:true,position:'bottom',
+        labels:{font:{size:12},boxWidth:10,padding:20}
+      }
     }
   }
 });
+
+/* ─── INIT ICONS ─────────────────────────────────── */
+lucide.createIcons();
 </script>
 </body>
 </html>

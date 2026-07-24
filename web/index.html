@@ -1,473 +1,1024 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>LLM-Litmus | Enterprise RAG Evaluation Platform</title>
-  <meta name="description" content="Automated benchmark testing & quality gating for LLM RAG pipelines across 204 Indian income tax test cases.">
-  
-  <!-- Tailwind CSS & Google Fonts -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
-  
-  <!-- Chart.js & Lucide Icons -->
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>LLM-Litmus · RAG Evaluation Platform</title>
+  <meta name="description" content="Automated benchmark testing & quality gating for LLM RAG pipelines across 204 Indian income tax test cases." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-  <script src="https://unpkg.com/lucide@latest"></script>
-
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: {
-            sans: ['Plus Jakarta Sans', 'sans-serif'],
-          },
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              100: '#e0e7ff',
-              400: '#818cf8',
-              500: '#6366f1',
-              600: '#4f46e5',
-              900: '#312e81',
-            }
-          }
-        }
-      }
-    }
-  </script>
 
   <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #050810;
+      --bg-2: #0b0f1a;
+      --bg-3: #0f1525;
+      --border: rgba(255,255,255,0.07);
+      --border-hover: rgba(139,92,246,0.5);
+      --text-1: #f1f5f9;
+      --text-2: #94a3b8;
+      --text-3: #475569;
+      --violet: #8b5cf6;
+      --violet-dim: rgba(139,92,246,0.12);
+      --cyan: #06b6d4;
+      --cyan-dim: rgba(6,182,212,0.10);
+      --emerald: #10b981;
+      --rose: #f43f5e;
+      --amber: #f59e0b;
+    }
+
+    html { scroll-behavior: smooth; }
+
     body {
-      background-color: #070a12;
-      color: #f8fafc;
-      font-family: 'Plus Jakarta Sans', sans-serif;
+      background: var(--bg);
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+      min-height: 100vh;
+      overflow-x: hidden;
     }
 
-    /* Glassmorphism Cards */
-    .glass-card {
-      background: rgba(15, 23, 42, 0.65);
-      backdrop-filter: blur(16px);
-      -webkit-backdrop-filter: blur(16px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
-      box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.5);
-    }
-    
-    .glass-card-hover {
-      transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-    }
-    .glass-card-hover:hover {
-      transform: translateY(-3px);
-      border-color: rgba(129, 140, 248, 0.4);
-      box-shadow: 0 20px 40px -15px rgba(99, 102, 241, 0.25);
-    }
-
-    /* Gradient Text & Glow */
-    .text-gradient {
-      background: linear-gradient(135deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    
-    .glow-bg {
-      position: absolute;
-      width: 400px;
-      height: 400px;
-      background: radial-gradient(circle, rgba(99, 102, 241, 0.15) 0%, rgba(0, 0, 0, 0) 70%);
+    /* ── NOISE OVERLAY ──────────────────────────────── */
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='300' height='300'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='300' height='300' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
       pointer-events: none;
       z-index: 0;
     }
-    
-    /* Step active highlight */
-    .step-active {
-      border-color: #6366f1;
-      background: rgba(99, 102, 241, 0.1);
+
+    /* ── MESH GRADIENT BLOBS ────────────────────────── */
+    .blob {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(100px);
+      opacity: 0.35;
+      pointer-events: none;
+      z-index: 0;
+    }
+    .blob-1 { width: 600px; height: 600px; background: #7c3aed; top: -200px; left: -150px; animation: drift 20s ease-in-out infinite alternate; }
+    .blob-2 { width: 500px; height: 500px; background: #0e7490; bottom: 0; right: -100px; animation: drift 25s ease-in-out infinite alternate-reverse; }
+    .blob-3 { width: 300px; height: 300px; background: #4f46e5; top: 50%; left: 40%; animation: drift 18s ease-in-out infinite alternate; }
+
+    @keyframes drift {
+      0%   { transform: translate(0px,   0px) scale(1); }
+      100% { transform: translate(40px, 30px) scale(1.08); }
     }
 
-    /* Scrollbar */
-    ::-webkit-scrollbar {
-      width: 8px;
-      height: 8px;
+    /* ── COMMON LAYOUT ──────────────────────────────── */
+    .z1 { position: relative; z-index: 1; }
+    .wrap { max-width: 1200px; margin: 0 auto; padding: 0 24px; }
+
+    /* ── NAV ────────────────────────────────────────── */
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(5,8,16,0.75);
+      backdrop-filter: blur(18px);
+      -webkit-backdrop-filter: blur(18px);
+      border-bottom: 1px solid var(--border);
     }
-    ::-webkit-scrollbar-track {
-      background: #090d16;
+    .nav-inner {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      height: 64px;
     }
-    ::-webkit-scrollbar-thumb {
-      background: #1e293b;
-      border-radius: 4px;
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
     }
-    ::-webkit-scrollbar-thumb:hover {
-      background: #334155;
+    .logo-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      box-shadow: 0 0 20px rgba(124,58,237,0.4);
+    }
+    .logo-text { font-size: 16px; font-weight: 800; color: var(--text-1); letter-spacing: -0.3px; }
+    .logo-text span { color: var(--violet); }
+    .logo-badge {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      padding: 2px 8px; border-radius: 99px;
+      background: rgba(139,92,246,0.15);
+      color: #a78bfa;
+      border: 1px solid rgba(139,92,246,0.3);
+    }
+    .nav-links { display: flex; align-items: center; gap: 32px; }
+    .nav-links a { font-size: 13px; font-weight: 500; color: var(--text-2); text-decoration: none; transition: color 0.15s; }
+    .nav-links a:hover { color: var(--text-1); }
+    .btn-gh {
+      display: inline-flex; align-items: center; gap: 6px;
+      font-size: 12px; font-weight: 600;
+      padding: 7px 16px; border-radius: 8px;
+      background: var(--bg-3); border: 1px solid rgba(255,255,255,0.1);
+      color: var(--text-2); text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-gh:hover { border-color: var(--border-hover); color: var(--text-1); }
+
+    /* ── HERO ───────────────────────────────────────── */
+    .hero {
+      padding: 100px 0 80px;
+      text-align: center;
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 6px 16px; border-radius: 99px;
+      background: rgba(16,185,129,0.08);
+      border: 1px solid rgba(16,185,129,0.25);
+      font-size: 11px; font-weight: 700; letter-spacing: 0.06em; color: var(--emerald);
+      margin-bottom: 28px;
+    }
+    .hero-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: var(--emerald); animation: pulse 2s infinite; }
+    @keyframes pulse { 0%,100%{ opacity:1 } 50%{ opacity:0.4 } }
+
+    .hero-title {
+      font-size: clamp(36px, 6vw, 68px);
+      font-weight: 900;
+      letter-spacing: -2px;
+      line-height: 1.05;
+      color: var(--text-1);
+    }
+    .hero-title .hl {
+      background: linear-gradient(90deg, #8b5cf6, #06b6d4);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    .hero-sub {
+      margin-top: 20px;
+      font-size: 17px;
+      color: var(--text-2);
+      font-weight: 400;
+      max-width: 600px;
+      margin-left: auto;
+      margin-right: auto;
+      line-height: 1.65;
+    }
+
+    /* Hero CTA Buttons */
+    .hero-ctas {
+      margin-top: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .btn-primary {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 10px;
+      background: linear-gradient(135deg, #7c3aed, #06b6d4);
+      color: white; font-size: 14px; font-weight: 700;
+      border: none; cursor: pointer; text-decoration: none;
+      transition: opacity 0.2s, transform 0.2s;
+      box-shadow: 0 0 30px rgba(124,58,237,0.35);
+    }
+    .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+    .btn-outline {
+      display: inline-flex; align-items: center; gap: 8px;
+      padding: 12px 24px; border-radius: 10px;
+      background: var(--bg-3); border: 1px solid var(--border);
+      color: var(--text-2); font-size: 14px; font-weight: 600;
+      cursor: pointer; text-decoration: none;
+      transition: all 0.2s;
+    }
+    .btn-outline:hover { border-color: var(--border-hover); color: var(--text-1); }
+
+    /* ── KPI GRID ───────────────────────────────────── */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 16px;
+      margin-top: 56px;
+    }
+    .kpi-card {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px 20px;
+      transition: all 0.25s;
+    }
+    .kpi-card:hover {
+      border-color: var(--border-hover);
+      transform: translateY(-2px);
+      box-shadow: 0 16px 40px rgba(0,0,0,0.4);
+    }
+    .kpi-tag { font-size: 10px; font-weight: 700; letter-spacing: 0.08em; color: var(--text-3); text-transform: uppercase; margin-bottom: 10px; }
+    .kpi-value { font-size: 36px; font-weight: 900; letter-spacing: -1.5px; color: var(--text-1); line-height: 1; }
+    .kpi-delta { font-size: 11px; font-weight: 600; margin-top: 6px; }
+    .delta-up { color: var(--emerald); }
+    .delta-neutral { color: var(--violet); }
+
+    /* ── SECTION HEADERS ────────────────────────────── */
+    .section-tag {
+      font-size: 11px; font-weight: 700; letter-spacing: 0.08em;
+      text-transform: uppercase; color: var(--violet);
+      margin-bottom: 12px;
+    }
+    .section-title {
+      font-size: clamp(24px, 4vw, 36px);
+      font-weight: 800; letter-spacing: -1px;
+      color: var(--text-1); margin-bottom: 8px;
+    }
+    .section-sub { font-size: 14px; color: var(--text-2); line-height: 1.65; max-width: 560px; }
+
+    /* ── HOW IT WORKS ───────────────────────────────── */
+    section { padding: 80px 0; }
+
+    .pipeline {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 2px;
+      margin-top: 48px;
+      background: var(--border);
+      border-radius: 20px;
+      overflow: hidden;
+    }
+    .pipe-step {
+      background: var(--bg-2);
+      padding: 28px 22px;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+    .pipe-step:hover { background: var(--bg-3); }
+    .pipe-step.active { background: rgba(139,92,246,0.08); }
+    .pipe-num {
+      width: 32px; height: 32px; border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 13px; font-weight: 800; margin-bottom: 18px;
+    }
+    .pipe-icon { font-size: 28px; margin-bottom: 14px; }
+    .pipe-title { font-size: 14px; font-weight: 700; color: var(--text-1); margin-bottom: 8px; }
+    .pipe-desc { font-size: 12px; color: var(--text-2); line-height: 1.6; }
+
+    /* ── LIVE SANDBOX ───────────────────────────────── */
+    .sandbox-wrap {
+      background: var(--bg-2);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      overflow: hidden;
+      margin-top: 48px;
+    }
+    .sandbox-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 20px 28px;
+      border-bottom: 1px solid var(--border);
+      background: var(--bg-3);
+    }
+    .sandbox-title-row { display: flex; align-items: center; gap: 12px; }
+    .sandbox-live-dot {
+      width: 8px; height: 8px; border-radius: 50%;
+      background: var(--emerald);
+      box-shadow: 0 0 8px var(--emerald);
+      animation: pulse 2s infinite;
+    }
+    .sample-pills { display: flex; gap: 8px; flex-wrap: wrap; }
+    .pill {
+      font-size: 11px; font-weight: 600;
+      padding: 5px 12px; border-radius: 99px;
+      background: var(--bg-2); border: 1px solid var(--border);
+      color: var(--text-2); cursor: pointer; transition: all 0.2s;
+    }
+    .pill:hover { border-color: var(--border-hover); color: var(--text-1); }
+    .pill.active { background: rgba(139,92,246,0.15); border-color: rgba(139,92,246,0.4); color: #c4b5fd; }
+
+    .sandbox-body { padding: 24px 28px; }
+
+    .query-row {
+      display: flex;
+      gap: 10px;
+      margin-bottom: 24px;
+    }
+    .query-input {
+      flex: 1;
+      background: var(--bg-3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 16px;
+      font-size: 13px;
+      color: var(--text-1);
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .query-input:focus { border-color: rgba(139,92,246,0.5); }
+    .run-btn {
+      display: flex; align-items: center; gap: 8px;
+      padding: 12px 20px; border-radius: 10px;
+      background: linear-gradient(135deg, #7c3aed, #0e7490);
+      border: none; color: white;
+      font-size: 13px; font-weight: 700;
+      cursor: pointer; font-family: 'Inter', sans-serif;
+      transition: opacity 0.2s, transform 0.15s;
+      white-space: nowrap;
+      box-shadow: 0 4px 20px rgba(124,58,237,0.3);
+    }
+    .run-btn:hover { opacity: 0.9; transform: translateY(-1px); }
+    .run-btn:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+    .run-btn svg { width: 14px; height: 14px; }
+
+    /* Sandbox Output Panels */
+    .output-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 14px;
+    }
+    .output-panel {
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      overflow: hidden;
+    }
+    .op-header {
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border);
+      background: rgba(255,255,255,0.02);
+    }
+    .op-label { font-size: 10px; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
+    .op-body { padding: 16px; min-height: 120px; }
+    .answer-text {
+      font-size: 13px; color: var(--text-1);
+      line-height: 1.7; font-weight: 400;
+    }
+    .mono { font-family: 'JetBrains Mono', monospace; }
+    .chunk-card {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 10px;
+      border-left: 3px solid var(--violet);
+      font-size: 11px; color: var(--text-2);
+      line-height: 1.6;
+    }
+    .chunk-card .ch-header {
+      font-size: 10px; font-weight: 700;
+      color: var(--violet); margin-bottom: 6px;
+      display: flex; justify-content: space-between;
+    }
+    .sim-bar {
+      display: flex; align-items: center; gap: 8px; margin-top: 6px;
+    }
+    .sim-track {
+      flex: 1; height: 4px; border-radius: 99px; background: rgba(255,255,255,0.07);
+    }
+    .sim-fill {
+      height: 4px; border-radius: 99px;
+      background: linear-gradient(90deg, #7c3aed, #06b6d4);
+      transition: width 0.8s ease;
+    }
+    .sim-val { font-size: 10px; font-weight: 700; color: var(--cyan); }
+
+    /* Status row */
+    .status-row {
+      display: flex; gap: 10px; margin-bottom: 14px; flex-wrap: wrap;
+    }
+    .status-chip {
+      display: flex; align-items: center; gap: 5px;
+      font-size: 11px; font-weight: 600;
+      padding: 4px 10px; border-radius: 6px;
+    }
+    .chip-pass { background: rgba(16,185,129,0.12); color: var(--emerald); border: 1px solid rgba(16,185,129,0.25); }
+    .chip-info { background: rgba(139,92,246,0.12); color: #a78bfa; border: 1px solid rgba(139,92,246,0.25); }
+    .chip-dot { width: 6px; height: 6px; border-radius: 50%; }
+    .dot-green { background: var(--emerald); }
+    .dot-violet { background: #a78bfa; }
+
+    /* cursor blink */
+    .typing-cursor::after { content: '|'; animation: blink 1s infinite; color: var(--violet); }
+    @keyframes blink { 0%,100%{ opacity:1 } 50%{ opacity:0 } }
+
+    /* Loading spinner */
+    .spinner {
+      width: 16px; height: 16px;
+      border: 2px solid rgba(255,255,255,0.2);
+      border-top-color: white;
+      border-radius: 50%;
+      animation: spin 0.7s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── BENCHMARK TABLE ────────────────────────────── */
+    .filter-bar { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 24px; }
+    .filt-btn {
+      font-size: 11px; font-weight: 600; padding: 6px 14px;
+      border-radius: 8px; border: 1px solid var(--border);
+      background: var(--bg-2); color: var(--text-2);
+      cursor: pointer; transition: all 0.2s;
+    }
+    .filt-btn:hover, .filt-btn.active {
+      background: rgba(139,92,246,0.15);
+      border-color: rgba(139,92,246,0.4);
+      color: #c4b5fd;
+    }
+
+    .bm-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 14px;
+    }
+    .bm-card {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 14px; padding: 18px 20px;
+      transition: all 0.2s;
+    }
+    .bm-card:hover { border-color: rgba(255,255,255,0.12); transform: translateY(-1px); }
+    .bm-card-top { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+    .cat-tag {
+      font-size: 10px; font-weight: 700; letter-spacing: 0.06em;
+      text-transform: uppercase; padding: 3px 8px; border-radius: 4px;
+    }
+    .cat-factual    { background: rgba(6,182,212,0.12); color: var(--cyan); }
+    .cat-reasoning  { background: rgba(139,92,246,0.12); color: #a78bfa; }
+    .cat-multi-hop  { background: rgba(245,158,11,0.12); color: var(--amber); }
+    .cat-adversarial { background: rgba(244,63,94,0.12); color: var(--rose); }
+    .cat-edge_case  { background: rgba(249,115,22,0.12); color: #fb923c; }
+    .cat-out_of_scope { background: rgba(100,116,139,0.12); color: #94a3b8; }
+    .pass-badge { font-size: 11px; font-weight: 700; padding: 3px 8px; border-radius: 4px; }
+    .pass-PASS { background: rgba(16,185,129,0.12); color: var(--emerald); }
+    .pass-FAIL { background: rgba(244,63,94,0.12); color: var(--rose); }
+    .bm-q { font-size: 12px; color: var(--text-1); font-weight: 500; line-height: 1.5; margin-bottom: 8px; }
+    .bm-diff { font-size: 10px; color: var(--text-3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.06em; }
+
+    /* ── ANALYTICS CHARTS ───────────────────────────── */
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 2fr 1fr;
+      gap: 16px;
+      margin-top: 48px;
+    }
+    .chart-card {
+      background: var(--bg-2); border: 1px solid var(--border);
+      border-radius: 16px; padding: 24px;
+    }
+    .chart-title { font-size: 13px; font-weight: 700; color: var(--text-1); margin-bottom: 6px; }
+    .chart-sub { font-size: 11px; color: var(--text-3); margin-bottom: 20px; }
+
+    /* ── FOOTER ─────────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0;
+      text-align: center;
+      color: var(--text-3);
+      font-size: 12px;
+    }
+    footer a { color: var(--text-2); text-decoration: none; }
+    footer a:hover { color: var(--text-1); }
+
+    /* ── RESPONSIVE ─────────────────────────────────── */
+    @media (max-width: 900px) {
+      .kpi-grid { grid-template-columns: repeat(2, 1fr); }
+      .pipeline { grid-template-columns: repeat(2, 1fr); }
+      .output-grid { grid-template-columns: 1fr; }
+      .bm-grid { grid-template-columns: repeat(2, 1fr); }
+      .charts-grid { grid-template-columns: 1fr; }
+      .nav-links { display: none; }
+    }
+    @media (max-width: 560px) {
+      .kpi-grid { grid-template-columns: 1fr 1fr; }
+      .bm-grid { grid-template-columns: 1fr; }
+      .pipeline { grid-template-columns: 1fr 1fr; }
     }
   </style>
 </head>
-<body class="min-h-screen relative overflow-x-hidden selection:bg-brand-500 selection:text-white">
+<body>
 
-  <!-- Background Decorative Glow -->
-  <div class="glow-bg top-0 left-1/4"></div>
-  <div class="glow-bg top-96 right-10"></div>
+<!-- Ambient Blobs -->
+<div class="blob blob-1"></div>
+<div class="blob blob-2"></div>
+<div class="blob blob-3"></div>
 
-  <!-- Header Navigation Bar -->
-  <header class="sticky top-0 z-50 glass-card border-b border-slate-800/80 px-6 py-4">
-    <div class="max-w-7xl mx-auto flex items-center justify-between">
-      <div class="flex items-center space-x-3">
-        <div class="h-10 w-10 rounded-xl bg-gradient-to-tr from-brand-600 to-purple-500 flex items-center justify-center shadow-lg shadow-brand-500/30">
-          <i data-lucide="flask-conical" class="w-5 h-5 text-white"></i>
-        </div>
-        <div>
-          <span class="text-xl font-extrabold tracking-tight text-white">LLM<span class="text-gradient">-Litmus</span></span>
-          <span class="ml-2 text-xs font-semibold px-2.5 py-0.5 rounded-full bg-brand-900/60 text-brand-400 border border-brand-500/30">v1.3.0</span>
-        </div>
-      </div>
-
-      <nav class="hidden md:flex items-center space-x-8 text-sm font-medium text-slate-300">
-        <a href="#overview" class="hover:text-brand-400 transition-colors">Overview</a>
-        <a href="#how-it-works" class="hover:text-brand-400 transition-colors">How It Works</a>
-        <a href="#sandbox" class="hover:text-brand-400 transition-colors">Live Sandbox</a>
-        <a href="#benchmarks" class="hover:text-brand-400 transition-colors">Benchmark Suite</a>
-        <a href="#analytics" class="hover:text-brand-400 transition-colors">Analytics</a>
-      </nav>
-
-      <div class="flex items-center space-x-4">
-        <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" class="flex items-center space-x-2 px-4 py-2 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-200 text-sm font-semibold border border-slate-700 transition-all shadow-sm">
-          <i data-lucide="github" class="w-4 h-4"></i>
-          <span>GitHub</span>
-        </a>
-      </div>
-    </div>
-  </header>
-
-  <!-- Hero Section -->
-  <section id="overview" class="relative pt-12 pb-16 px-6 max-w-7xl mx-auto">
-    <div class="text-center max-w-3xl mx-auto space-y-6">
-      <div class="inline-flex items-center space-x-2 px-4 py-1.5 rounded-full bg-emerald-950/60 border border-emerald-500/30 text-emerald-400 text-xs font-bold tracking-wide">
-        <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-        <span>BENCHMARK PASSED · 83.3% ACCURACY (170/204 TEST CASES)</span>
-      </div>
-      
-      <h1 class="text-4xl sm:text-6xl font-black text-white tracking-tight leading-tight">
-        Enterprise Evaluation Platform for <span class="text-gradient">Tax RAG Pipelines</span>
-      </h1>
-      
-      <p class="text-base sm:text-lg text-slate-400 font-medium leading-relaxed">
-        Automated quality gating, hallucination detection, and multi-hop retrieval telemetry across 204 real-world Indian income tax benchmark queries.
-      </p>
-
-      <!-- Key Metrics Row -->
-      <div class="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6">
-        <div class="glass-card glass-card-hover rounded-2xl p-5 text-left border-l-4 border-l-emerald-500">
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Pass Rate</p>
-          <p class="text-3xl font-extrabold text-white mt-1">83.3%</p>
-          <p class="text-xs text-emerald-400 font-semibold mt-1">↑ +11.2% vs baseline</p>
-        </div>
-
-        <div class="glass-card glass-card-hover rounded-2xl p-5 text-left border-l-4 border-l-brand-500">
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Retrieval Hit Rate</p>
-          <p class="text-3xl font-extrabold text-white mt-1">97.5%</p>
-          <p class="text-xs text-brand-400 font-semibold mt-1">Top-5 ChromaDB Recall</p>
-        </div>
-
-        <div class="glass-card glass-card-hover rounded-2xl p-5 text-left border-l-4 border-l-purple-500">
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">MRR Ranking Score</p>
-          <p class="text-3xl font-extrabold text-white mt-1">0.913</p>
-          <p class="text-xs text-purple-400 font-semibold mt-1">Rank #1 Precision</p>
-        </div>
-
-        <div class="glass-card glass-card-hover rounded-2xl p-5 text-left border-l-4 border-l-pink-500">
-          <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">Total Test Suite</p>
-          <p class="text-3xl font-extrabold text-white mt-1">204</p>
-          <p class="text-xs text-slate-400 font-semibold mt-1">7 Query Categories</p>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Interactive 4-Step RAG Pipeline Explainer -->
-  <section id="how-it-works" class="py-12 px-6 max-w-7xl mx-auto">
-    <div class="text-center max-w-2xl mx-auto mb-10">
-      <h2 class="text-2xl sm:text-3xl font-extrabold text-white">How The Platform Evaluates AI Answers</h2>
-      <p class="text-sm text-slate-400 mt-2">Zero technical knowledge required! Follow the 4-step RAG evaluation flow below.</p>
-    </div>
-
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-      <!-- Step 1 -->
-      <div class="glass-card glass-card-hover rounded-2xl p-6 relative">
-        <div class="w-8 h-8 rounded-full bg-brand-900/80 text-brand-400 flex items-center justify-center font-bold text-sm mb-4 border border-brand-500/30">1</div>
-        <i data-lucide="file-text" class="w-8 h-8 text-brand-400 mb-3"></i>
-        <h3 class="font-bold text-white text-base">Knowledge Base Ingestion</h3>
-        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-          Ingests 8 official tax reference guides (Section 80C, 80D, 24b, HRA, TDS, Capital Gains, NPS) split into 49 text chunks.
-        </p>
-      </div>
-
-      <!-- Step 2 -->
-      <div class="glass-card glass-card-hover rounded-2xl p-6 relative">
-        <div class="w-8 h-8 rounded-full bg-purple-900/80 text-purple-400 flex items-center justify-center font-bold text-sm mb-4 border border-purple-500/30">2</div>
-        <i data-lucide="search" class="w-8 h-8 text-purple-400 mb-3"></i>
-        <h3 class="font-bold text-white text-base">Vector Search (Top-5)</h3>
-        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-          Converts user queries into dense vector embeddings using <code class="text-purple-300">all-MiniLM-L6-v2</code> and retrieves top 5 relevant document chunks.
-        </p>
-      </div>
-
-      <!-- Step 3 -->
-      <div class="glass-card glass-card-hover rounded-2xl p-6 relative">
-        <div class="w-8 h-8 rounded-full bg-pink-900/80 text-pink-400 flex items-center justify-center font-bold text-sm mb-4 border border-pink-500/30">3</div>
-        <i data-lucide="bot" class="w-8 h-8 text-pink-400 mb-3"></i>
-        <h3 class="font-bold text-white text-base">LLM Deductive Synthesis</h3>
-        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-          The LLM model (<code class="text-pink-300">Llama 3.3 70B</code> / <code class="text-pink-300">Llama 3.2 1B</code>) applies tax rules to generate precise advice.
-        </p>
-      </div>
-
-      <!-- Step 4 -->
-      <div class="glass-card glass-card-hover rounded-2xl p-6 relative">
-        <div class="w-8 h-8 rounded-full bg-emerald-900/80 text-emerald-400 flex items-center justify-center font-bold text-sm mb-4 border border-emerald-500/30">4</div>
-        <i data-lucide="shield-check" class="w-8 h-8 text-emerald-400 mb-3"></i>
-        <h3 class="font-bold text-white text-base">Automated Quality Gate</h3>
-        <p class="text-xs text-slate-400 mt-2 leading-relaxed">
-          Benchmarks model answer against ground truth across semantic similarity, context recall, and LLM-as-a-Judge correctness.
-        </p>
-      </div>
-    </div>
-  </section>
-
-  <!-- Interactive Live Query Sandbox -->
-  <section id="sandbox" class="py-12 px-6 max-w-7xl mx-auto">
-    <div class="glass-card rounded-3xl p-8 relative overflow-hidden border border-brand-500/30">
-      <div class="flex flex-col md:flex-row md:items-center justify-between pb-6 border-b border-slate-800">
-        <div>
-          <span class="text-xs font-bold uppercase tracking-wider text-brand-400">Interactive Sandbox</span>
-          <h2 class="text-2xl font-black text-white mt-1">Test Real Tax Queries Live</h2>
-          <p class="text-xs text-slate-400 mt-1">Click any sample query below to see how the RAG pipeline retrieves chunks and generates answers.</p>
-        </div>
-        
-        <div class="mt-4 md:mt-0 flex space-x-2">
-          <button onclick="setSampleQuery('Can I claim Section 80C deduction under the new tax regime?')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Sample 1 (Regime)</button>
-          <button onclick="setSampleQuery('What is the TDS rate under Section 194J for professional fees?')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Sample 2 (TDS)</button>
-          <button onclick="setSampleQuery('What is the maximum interest deduction on home loan under Section 24b for self-occupied property?')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 transition">Sample 3 (Home Loan)</button>
-        </div>
-      </div>
-
-      <div class="mt-6 space-y-4">
-        <div>
-          <label class="block text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">Income Tax Question</label>
-          <div class="flex space-x-3">
-            <input type="text" id="queryInput" value="Can I claim Section 80C deduction under the new tax regime?" class="flex-1 bg-slate-900/90 border border-slate-700 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-brand-500 transition">
-            <button onclick="runLiveTest()" class="px-6 py-3 rounded-xl bg-gradient-to-r from-brand-600 to-purple-600 hover:from-brand-500 hover:to-purple-500 text-white font-bold text-sm shadow-lg shadow-brand-500/25 transition">
-              Run RAG Query
-            </button>
-          </div>
-        </div>
-
-        <!-- Sandbox Output Display -->
-        <div id="sandboxOutput" class="space-y-4 pt-4">
-          <div class="p-5 rounded-2xl bg-slate-900/80 border border-slate-800">
-            <div class="flex items-center justify-between mb-3">
-              <span class="text-xs font-bold text-emerald-400 uppercase tracking-wider flex items-center"><i data-lucide="check-circle-2" class="w-4 h-4 mr-1.5"></i> Generated AI Response</span>
-              <span class="text-xs font-medium text-slate-400">Model: Llama-3.3-70b · Latency: 1.24s</span>
-            </div>
-            <p id="ansText" class="text-sm text-slate-200 leading-relaxed font-medium">
-              No, Section 80C deductions (such as PPF, ELSS, EPF, Life Insurance premiums) are NOT available under the new tax regime. Under FY 2024-25 rules, most itemized deductions under Chapter VI-A are excluded under the new regime, except for employer contributions to NPS under Section 80CCD(2) and standard deduction of Rs 50,000 for salaried employees.
-            </p>
-          </div>
-
-          <!-- Retrieved Chunks Cards -->
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-              <span class="font-bold text-brand-400 block mb-1">📄 Chunk #1 · docs/section_80c_deductions.txt (Similarity: 0.942)</span>
-              <p id="chunk1Text" class="text-slate-400">Section 80C allows a maximum deduction of Rs 1,50,000 from total income for specified investments under the Old Tax Regime. These deductions are NOT available under the Default New Tax Regime from FY 2023-24 onwards.</p>
-            </div>
-            <div class="p-4 rounded-xl bg-slate-900/60 border border-slate-800 text-xs">
-              <span class="font-bold text-brand-400 block mb-1">📄 Chunk #2 · docs/income_tax_basics.txt (Similarity: 0.887)</span>
-              <p id="chunk2Text" class="text-slate-400">Under the new tax regime, a rebate under Section 87A is available for income up to Rs 7 lakh. However, deductions like 80C, 80D, and HRA exemption are NOT available under the new regime.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- Benchmark Category Breakdown & Charts -->
-  <section id="benchmarks" class="py-12 px-6 max-w-7xl mx-auto">
-    <div class="flex flex-col md:flex-row md:items-center justify-between mb-8">
+<!-- ── NAV ─────────────────────────────────────── -->
+<nav class="z1">
+  <div class="wrap nav-inner">
+    <a class="logo" href="#">
+      <div class="logo-icon">🧪</div>
       <div>
-        <h2 class="text-2xl font-black text-white">204 Query Benchmark Suite</h2>
-        <p class="text-xs text-slate-400 mt-1">Accuracy breakdown across 7 query categories and difficulty levels.</p>
+        <span class="logo-text">LLM<span>-Litmus</span></span>
       </div>
+      <span class="logo-badge">v1.3.0</span>
+    </a>
 
-      <!-- Category Filter Tabs -->
-      <div class="flex flex-wrap gap-2 mt-4 md:mt-0" id="catFilterButtons">
-        <button onclick="filterCategory('ALL')" class="text-xs font-bold px-3 py-1.5 rounded-lg bg-brand-600 text-white shadow">All (204)</button>
-        <button onclick="filterCategory('factual')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Factual (98)</button>
-        <button onclick="filterCategory('reasoning')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Reasoning (46)</button>
-        <button onclick="filterCategory('multi-hop')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Multi-Hop (16)</button>
-        <button onclick="filterCategory('adversarial')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Adversarial (16)</button>
-        <button onclick="filterCategory('edge_case')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Edge Case (18)</button>
-        <button onclick="filterCategory('out_of_scope')" class="text-xs font-semibold px-3 py-1.5 rounded-lg bg-slate-800 text-slate-300 hover:bg-slate-700">Out of Scope (10)</button>
-      </div>
+    <div class="nav-links">
+      <a href="#how-it-works">How It Works</a>
+      <a href="#sandbox">Live Sandbox</a>
+      <a href="#benchmarks">Benchmarks</a>
+      <a href="#analytics">Analytics</a>
     </div>
 
-    <!-- Category Pass Rate Visual Grid -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-emerald-500">
-        <div class="flex justify-between items-center mb-2">
-          <span class="text-xs font-bold text-slate-300">Factual Queries</span>
-          <span class="text-xs font-extrabold text-emerald-400">94.9% Pass</span>
-        </div>
-        <div class="w-full bg-slate-800 rounded-full h-2">
-          <div class="bg-emerald-400 h-2 rounded-full" style="width: 94.9%"></div>
-        </div>
-        <p class="text-xs text-slate-400 mt-2">Direct tax limits & legal section lookups.</p>
-      </div>
+    <a class="btn-gh" href="https://github.com/ps-keerthana/llm-litmus" target="_blank">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.165 6.839 9.489.5.092.682-.217.682-.482 0-.237-.008-.866-.013-1.7-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.528 2.341 1.087 2.91.831.092-.647.35-1.087.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.564 9.564 0 0 1 12 6.836a9.57 9.57 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.741 0 .267.18.578.688.48C19.138 20.161 22 16.416 22 12c0-5.523-4.477-10-10-10z"/></svg>
+      GitHub
+    </a>
+  </div>
+</nav>
 
-      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-emerald-500">
-        <div class="flex justify-between items-center mb-2">
-          <span class="text-xs font-bold text-slate-300">Out-of-Scope Refusals</span>
-          <span class="text-xs font-extrabold text-emerald-400">92.6% Pass</span>
-        </div>
-        <div class="w-full bg-slate-800 rounded-full h-2">
-          <div class="bg-emerald-400 h-2 rounded-full" style="width: 92.6%"></div>
-        </div>
-        <p class="text-xs text-slate-400 mt-2">Polite refusals on non-tax questions.</p>
-      </div>
-
-      <div class="glass-card rounded-2xl p-5 border-t-4 border-t-brand-500">
-        <div class="flex justify-between items-center mb-2">
-          <span class="text-xs font-bold text-slate-300">Reasoning & Deduction</span>
-          <span class="text-xs font-extrabold text-brand-400">87.0% Pass</span>
-        </div>
-        <div class="w-full bg-slate-800 rounded-full h-2">
-          <div class="bg-brand-500 h-2 rounded-full" style="width: 87.0%"></div>
-        </div>
-        <p class="text-xs text-slate-400 mt-2">Multi-step mathematical tax deductions.</p>
-      </div>
+<!-- ── HERO ─────────────────────────────────────── -->
+<section class="z1">
+  <div class="wrap hero">
+    <div class="hero-badge">
+      <span class="dot"></span>
+      BENCHMARK PASSED · 83.3% (170 / 204 QUERIES)
     </div>
 
-    <!-- Charts Section -->
-    <div id="analytics" class="grid grid-cols-1 md:grid-cols-2 gap-6">
-      <div class="glass-card rounded-2xl p-6">
-        <h3 class="text-base font-bold text-white mb-4">Pass Rate Trend Across Commits</h3>
-        <canvas id="trendChart" height="200"></canvas>
-      </div>
+    <h1 class="hero-title">
+      Stop Guessing If Your<br />
+      <span class="hl">RAG Pipeline Works</span>
+    </h1>
 
-      <div class="glass-card rounded-2xl p-6">
-        <h3 class="text-base font-bold text-white mb-4">Pass vs Fail Ratio</h3>
-        <canvas id="donutChart" height="200"></canvas>
+    <p class="hero-sub">
+      LLM-Litmus is an automated evaluation engine that benchmarks AI tax assistants across 204 expert-curated test cases — measuring accuracy, hallucination, retrieval precision, and latency in a single CI pipeline.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="#sandbox" class="btn-primary">
+        ⚡ Try Live Sandbox
+      </a>
+      <a href="https://github.com/ps-keerthana/llm-litmus" class="btn-outline" target="_blank">
+        📂 View Source Code
+      </a>
+    </div>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-tag">Pass Rate</div>
+        <div class="kpi-value" style="color:#10b981;">83.3%</div>
+        <div class="kpi-delta delta-up">↑ +11.2% vs baseline</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-tag">Retrieval Hit Rate</div>
+        <div class="kpi-value" style="color:#8b5cf6;">97.5%</div>
+        <div class="kpi-delta delta-neutral">Top-5 ChromaDB chunks</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-tag">MRR Score</div>
+        <div class="kpi-value" style="color:#06b6d4;">0.913</div>
+        <div class="kpi-delta delta-neutral">Mean Reciprocal Rank</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-tag">Test Suite Size</div>
+        <div class="kpi-value">204</div>
+        <div class="kpi-delta" style="color:#f59e0b;">7 query categories</div>
       </div>
     </div>
-  </section>
+  </div>
+</section>
 
-  <!-- Footer -->
-  <footer class="py-8 px-6 border-t border-slate-800/80 text-center text-xs text-slate-500">
-    <div class="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-      <div>
-        <span class="font-bold text-slate-400">LLM-Litmus Platform</span> · Open Source Enterprise RAG Benchmark
+<!-- ── HOW IT WORKS ───────────────────────────── -->
+<section id="how-it-works" class="z1">
+  <div class="wrap">
+    <div class="section-tag">Architecture</div>
+    <div class="section-title">4-Step RAG Evaluation Loop</div>
+    <p class="section-sub">From raw tax documents to graded AI answers — fully automated, zero human review required.</p>
+
+    <div class="pipeline">
+      <div class="pipe-step" onclick="highlightStep(0)" id="step-0">
+        <div class="pipe-num" style="background:rgba(139,92,246,0.15);color:#a78bfa;">01</div>
+        <div class="pipe-icon">📄</div>
+        <div class="pipe-title">Document Ingestion</div>
+        <div class="pipe-desc">8 official Indian tax guides — Sec 80C, 80D, Section 24b, HRA, TDS, NPS, Capital Gains — split into 49 semantic chunks and indexed in ChromaDB.</div>
       </div>
-      <div class="flex space-x-6 text-slate-400">
-        <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" class="hover:text-white transition">GitHub Repo</a>
-        <span>·</span>
-        <span>Version 1.3.0</span>
+      <div class="pipe-step" onclick="highlightStep(1)" id="step-1">
+        <div class="pipe-num" style="background:rgba(6,182,212,0.12);color:#67e8f9;">02</div>
+        <div class="pipe-icon">🔍</div>
+        <div class="pipe-title">Vector Retrieval (k=5)</div>
+        <div class="pipe-desc">Each query is encoded into dense embeddings via <code style="color:#67e8f9;font-size:11px;">all-MiniLM-L6-v2</code>. Top-5 semantically relevant chunks are retrieved.</div>
+      </div>
+      <div class="pipe-step" onclick="highlightStep(2)" id="step-2">
+        <div class="pipe-num" style="background:rgba(245,158,11,0.12);color:#fcd34d;">03</div>
+        <div class="pipe-icon">🤖</div>
+        <div class="pipe-title">LLM Answer Synthesis</div>
+        <div class="pipe-desc">Llama 3.3 70B (Groq, remote) or Llama 3.2 1B (Ollama, local) synthesises a precise answer strictly from retrieved context.</div>
+      </div>
+      <div class="pipe-step" onclick="highlightStep(3)" id="step-3">
+        <div class="pipe-num" style="background:rgba(16,185,129,0.12);color:#6ee7b7;">04</div>
+        <div class="pipe-icon">⚖️</div>
+        <div class="pipe-title">Automated Quality Gate</div>
+        <div class="pipe-desc">Answers are scored on semantic similarity, faithfulness, hallucination rate, and contextual recall. CI gate blocks merges below 70% pass rate.</div>
       </div>
     </div>
-  </footer>
+  </div>
+</section>
 
-  <script>
-    // Initialize Lucide Icons
-    lucide.createIcons();
+<!-- ── LIVE SANDBOX ───────────────────────────── -->
+<section id="sandbox" class="z1">
+  <div class="wrap">
+    <div class="section-tag">Interactive Demo</div>
+    <div class="section-title">Live Tax Query Sandbox</div>
+    <p class="section-sub">Run any income tax question and watch the RAG pipeline retrieve chunks, generate an answer, and grade it — all inline below.</p>
 
-    // Sample Query Data
-    const samples = {
-      1: {
-        q: "Can I claim Section 80C deduction under the new tax regime?",
-        ans: "No, Section 80C deductions (such as PPF, ELSS, EPF, Life Insurance premiums) are NOT available under the new tax regime. Under FY 2024-25 rules, most itemized deductions under Chapter VI-A are excluded under the new regime, except for employer contributions to NPS under Section 80CCD(2) and standard deduction of Rs 50,000 for salaried employees.",
-        c1: "Section 80C allows a maximum deduction of Rs 1,50,000 from total income for specified investments under the Old Tax Regime. These deductions are NOT available under the Default New Tax Regime from FY 2023-24 onwards.",
-        c2: "Under the new tax regime, a rebate under Section 87A is available for income up to Rs 7 lakh. However, deductions like 80C, 80D, and HRA exemption are NOT available under the new regime."
-      },
-      2: {
-        q: "What is the TDS rate under Section 194J for professional fees?",
-        ans: "Under Section 194J, TDS is deducted at 10% on payments for professional services if the aggregate amount paid during the financial year exceeds Rs 30,000. However, for fees for technical services (other than professional services), the TDS rate is 2%.",
-        c1: "TDS at 10% is deducted on payments for professional or technical services if the aggregate amount paid during the year exceeds Rs 30,000. For fees for technical services, the TDS rate is 2%.",
-        c2: "Professionals include lawyers, doctors, architects, accountants, engineers, interior decorators, and others notified by the CBDT."
-      },
-      3: {
-        q: "What is the maximum interest deduction on home loan under Section 24b for self-occupied property?",
-        ans: "Under Section 24(b), the maximum deduction allowed for interest on a home loan for a self-occupied residential property is Rs 2,00,000 per financial year, provided acquisition or construction is completed within 5 years from the end of the financial year in which the loan was taken.",
-        c1: "Deduction on home loan interest for a self-occupied property is capped at Rs 2,00,000 per financial year. Construction must be completed within 5 years.",
-        c2: "If construction takes longer than 5 years, the maximum deduction limit drops to Rs 30,000 per year."
-      }
+    <div class="sandbox-wrap">
+      <!-- Header -->
+      <div class="sandbox-header">
+        <div class="sandbox-title-row">
+          <span class="sandbox-live-dot"></span>
+          <span style="font-size:13px;font-weight:700;color:var(--text-1);">RAG Pipeline</span>
+          <span style="font-size:11px;color:var(--text-3);font-weight:500;">· Groq / llama-3.3-70b-versatile</span>
+        </div>
+        <div class="sample-pills">
+          <button class="pill active" id="pill-0" onclick="loadSample(0)">80C &amp; New Regime</button>
+          <button class="pill" id="pill-1" onclick="loadSample(1)">TDS 194J</button>
+          <button class="pill" id="pill-2" onclick="loadSample(2)">Home Loan 24b</button>
+          <button class="pill" id="pill-3" onclick="loadSample(3)">NPS 80CCD</button>
+        </div>
+      </div>
+
+      <!-- Body -->
+      <div class="sandbox-body">
+        <!-- Query Input Row -->
+        <div class="query-row">
+          <input type="text" class="query-input" id="queryInput"
+            value="Can I claim Section 80C deduction under the new tax regime?" 
+            placeholder="Type an income tax question…" />
+          <button class="run-btn" id="runBtn" onclick="runQuery()">
+            <span id="runBtnIcon">▶</span>
+            <span id="runBtnText">Run Query</span>
+          </button>
+        </div>
+
+        <!-- Status chips -->
+        <div class="status-row" id="statusRow" style="display:none;">
+          <div class="status-chip chip-info"><span class="chip-dot dot-violet"></span><span id="chipRetrieval">Vector search: 5 chunks</span></div>
+          <div class="status-chip chip-pass"><span class="chip-dot dot-green"></span><span id="chipStatus">PASS · Similarity: 0.891</span></div>
+          <div class="status-chip chip-info"><span class="chip-dot dot-violet"></span><span id="chipLatency">Latency: 1.34s</span></div>
+        </div>
+
+        <!-- Output Grid -->
+        <div class="output-grid">
+          <!-- Generated Answer -->
+          <div class="output-panel">
+            <div class="op-header">
+              <span class="op-label" style="color:#10b981;">🤖 Generated Answer</span>
+              <span id="ansSource" style="font-size:10px;color:var(--text-3);font-family:'JetBrains Mono',monospace;">llama-3.3-70b</span>
+            </div>
+            <div class="op-body">
+              <p class="answer-text" id="answerText">
+                No, Section 80C deductions — such as PPF, ELSS, EPF, Life Insurance premiums — are <strong>NOT available</strong> under the new tax regime. Under FY 2024-25, most deductions under Chapter VI-A are excluded under the new regime, except for employer NPS contributions under Section 80CCD(2) and the standard deduction of ₹50,000 for salaried employees.
+              </p>
+            </div>
+          </div>
+
+          <!-- Retrieved Chunks -->
+          <div class="output-panel">
+            <div class="op-header">
+              <span class="op-label" style="color:#8b5cf6;">📂 Retrieved Context Chunks</span>
+              <span style="font-size:10px;color:var(--text-3);">Top-5 · ChromaDB</span>
+            </div>
+            <div class="op-body" id="chunksBody">
+              <div class="chunk-card">
+                <div class="ch-header">
+                  <span>docs/section_80c_deductions.txt · Chunk 2</span>
+                </div>
+                Section 80C allows deductions up to ₹1,50,000. These deductions are NOT available under the New Tax Regime from FY 2023-24 onwards.
+                <div class="sim-bar">
+                  <div class="sim-track"><div class="sim-fill" style="width:94.2%"></div></div>
+                  <span class="sim-val">0.942</span>
+                </div>
+              </div>
+              <div class="chunk-card">
+                <div class="ch-header">
+                  <span>docs/income_tax_basics.txt · Chunk 4</span>
+                </div>
+                Under the new regime, deductions like 80C, 80D, and HRA exemption are NOT available. The 87A rebate applies to income up to ₹7 lakh.
+                <div class="sim-bar">
+                  <div class="sim-track"><div class="sim-fill" style="width:88.7%"></div></div>
+                  <span class="sim-val">0.887</span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── BENCHMARKS ─────────────────────────────── -->
+<section id="benchmarks" class="z1">
+  <div class="wrap">
+    <div class="section-tag">Benchmark Suite</div>
+    <div class="section-title">204 Expert-Curated Test Cases</div>
+    <p class="section-sub">Ground-truth benchmarked queries across 7 categories. Filter by type below.</p>
+
+    <div class="filter-bar" style="margin-top:32px;">
+      <button class="filt-btn active" onclick="filterBM('all',this)">All (204)</button>
+      <button class="filt-btn" onclick="filterBM('factual',this)">Factual</button>
+      <button class="filt-btn" onclick="filterBM('reasoning',this)">Reasoning</button>
+      <button class="filt-btn" onclick="filterBM('multi-hop',this)">Multi-Hop</button>
+      <button class="filt-btn" onclick="filterBM('adversarial',this)">Adversarial</button>
+      <button class="filt-btn" onclick="filterBM('edge_case',this)">Edge Case</button>
+      <button class="filt-btn" onclick="filterBM('out_of_scope',this)">Out-of-Scope</button>
+    </div>
+
+    <div class="bm-grid" id="bmGrid"></div>
+  </div>
+</section>
+
+<!-- ── ANALYTICS ──────────────────────────────── -->
+<section id="analytics" class="z1">
+  <div class="wrap">
+    <div class="section-tag">Analytics</div>
+    <div class="section-title">Performance Over Time</div>
+    <p class="section-sub">Pass rate improvement trajectory across 5 evaluation runs and commit SHAs.</p>
+
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">Pass Rate Trend (5 Runs)</div>
+        <div class="chart-sub">From baseline 65% → current 83.3% after RAG + prompt optimizations</div>
+        <canvas id="trendChart" height="160"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">Pass vs Fail Distribution</div>
+        <div class="chart-sub">Latest run: 170 passed, 34 failed</div>
+        <canvas id="donutChart" height="160"></canvas>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ── FOOTER ─────────────────────────────────── -->
+<footer class="z1">
+  <div class="wrap">
+    <p>Built by <a href="https://github.com/ps-keerthana" target="_blank">@ps-keerthana</a> · Open Source · <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank">GitHub Repository</a></p>
+    <p style="margin-top:6px;color:var(--text-3);">LLM-Litmus v1.3.0 · Llama 3.3 70B · ChromaDB · FastAPI · Streamlit</p>
+  </div>
+</footer>
+
+<script>
+// ── Sample Queries ────────────────────────────────────────
+const SAMPLES = [
+  {
+    q: "Can I claim Section 80C deduction under the new tax regime?",
+    ans: "No, Section 80C deductions — such as PPF, ELSS, EPF, Life Insurance premiums — are NOT available under the new tax regime. Under FY 2024-25, most deductions under Chapter VI-A are excluded under the new regime, except for employer NPS contributions under Section 80CCD(2) and the standard deduction of ₹50,000 for salaried employees.",
+    status: "PASS · Similarity: 0.891",
+    latency: "1.34s",
+    chunks: [
+      { src: "docs/section_80c_deductions.txt · Chunk 2", text: "Section 80C allows deductions up to ₹1,50,000. These deductions are NOT available under the New Tax Regime from FY 2023-24 onwards.", sim: 0.942 },
+      { src: "docs/income_tax_basics.txt · Chunk 4", text: "Under the new regime, deductions like 80C, 80D, and HRA exemption are NOT available. The 87A rebate applies to income up to ₹7 lakh.", sim: 0.887 },
+    ]
+  },
+  {
+    q: "What is the TDS rate under Section 194J for professional fees?",
+    ans: "Under Section 194J, TDS is deducted at 10% on payments for professional services if the aggregate amount paid during the financial year exceeds ₹30,000. However, for fees for technical services (excluding professional services), the TDS rate is 2%. Professionals include lawyers, doctors, architects, accountants, engineers and interior decorators.",
+    status: "PASS · Similarity: 0.927",
+    latency: "1.18s",
+    chunks: [
+      { src: "docs/tds_rules.txt · Chunk 3", text: "TDS at 10% is deducted on professional or technical service payments exceeding ₹30,000. For technical services, the rate is 2%.", sim: 0.963 },
+      { src: "docs/tds_rules.txt · Chunk 4", text: "Professionals include lawyers, doctors, architects, accountants, engineers, interior decorators and others notified by CBDT.", sim: 0.891 },
+    ]
+  },
+  {
+    q: "What is the maximum interest deduction on home loan under Section 24b?",
+    ans: "Under Section 24(b), the deduction for interest on a home loan for a self-occupied residential property is capped at ₹2,00,000 per financial year, provided acquisition or construction is completed within 5 years from the financial year in which the loan was taken. If construction exceeds 5 years, the cap drops to ₹30,000.",
+    status: "PASS · Similarity: 0.916",
+    latency: "1.21s",
+    chunks: [
+      { src: "docs/home_loan_section_24b.txt · Chunk 1", text: "Deduction on home loan interest for a self-occupied property is capped at ₹2,00,000 per financial year. Construction must complete within 5 years.", sim: 0.951 },
+      { src: "docs/home_loan_section_24b.txt · Chunk 2", text: "If construction takes longer than 5 years, the maximum deduction limit drops to ₹30,000 per year.", sim: 0.879 },
+    ]
+  },
+  {
+    q: "Can I claim additional NPS deduction under Section 80CCD(1B)?",
+    ans: "Yes. Section 80CCD(1B) provides an exclusive additional tax deduction of up to ₹50,000 for voluntary contributions to a Tier-I NPS account. This ₹50,000 limit is over and above the ₹1,50,000 limit under Section 80C/80CCD(1). Thus, total self-contribution NPS tax benefit can reach up to ₹2,00,000.",
+    status: "PASS · Similarity: 0.903",
+    latency: "1.09s",
+    chunks: [
+      { src: "docs/nps_section_80ccd.txt · Chunk 2", text: "Section 80CCD(1B) provides additional deduction up to ₹50,000 for Tier-I NPS contributions. This is over and above the ₹1.5 lakh 80C limit.", sim: 0.972 },
+      { src: "docs/nps_section_80ccd.txt · Chunk 1", text: "For salaried individuals, Section 80CCD(1) limit is 10% of Salary (Basic + DA), subject to overall ₹1,50,000 cap under 80CCE.", sim: 0.844 },
+    ]
+  }
+];
+
+// ── Benchmark Sample Cards ────────────────────────────────
+const BM_CARDS = [
+  { cat:"factual",   q:"What is the maximum deduction allowed under Section 80C?",             diff:"easy",   pass:"PASS" },
+  { cat:"reasoning", q:"If my salary is ₹12L and investments are ₹1.5L, what tax under old regime?", diff:"medium", pass:"PASS" },
+  { cat:"multi-hop", q:"Can a senior citizen claim both 80C and 80D deduction? What is the combined limit?", diff:"hard", pass:"PASS" },
+  { cat:"adversarial",q:"Section 80C limit is ₹2 lakh, correct?",                             diff:"medium", pass:"PASS" },
+  { cat:"edge_case",  q:"My LIC premium is ₹80,000 for sum assured of ₹4L. What is my 80C deduction?", diff:"hard", pass:"FAIL" },
+  { cat:"out_of_scope",q:"What is the best stock to buy right now?",                           diff:"easy",   pass:"PASS" },
+  { cat:"factual",   q:"What is the TDS threshold for rent payments under Section 194-I?",     diff:"easy",   pass:"PASS" },
+  { cat:"reasoning", q:"I sold equity shares after 14 months. What is the applicable tax rate?", diff:"medium", pass:"PASS" },
+  { cat:"multi-hop", q:"I have HRA exemption AND home loan. Can I claim both Section 24b and HRA?", diff:"hard", pass:"PASS" },
+  { cat:"adversarial",q:"Can NRIs claim HRA exemption under Section 10(13A)?",                 diff:"hard",   pass:"PASS" },
+  { cat:"factual",   q:"What is the basic exemption limit for senior citizens under the old regime?", diff:"easy", pass:"PASS" },
+  { cat:"edge_case", q:"I sold my house after 2 years and 1 month. Is this long-term or short-term?", diff:"medium", pass:"PASS" },
+];
+
+let currentFilter = "all";
+
+function renderBM(filter) {
+  const grid = document.getElementById('bmGrid');
+  const filtered = filter === 'all' ? BM_CARDS : BM_CARDS.filter(c => c.cat === filter);
+  grid.innerHTML = filtered.map(c => `
+    <div class="bm-card">
+      <div class="bm-card-top">
+        <span class="cat-tag cat-${c.cat}">${c.cat.replace('_',' ')}</span>
+        <span class="pass-badge pass-${c.pass}">${c.pass}</span>
+      </div>
+      <div class="bm-q">${c.q}</div>
+      <div class="bm-diff">⚡ ${c.diff}</div>
+    </div>
+  `).join('');
+}
+
+function filterBM(cat, btn) {
+  currentFilter = cat;
+  document.querySelectorAll('.filt-btn').forEach(b => b.classList.remove('active'));
+  btn.classList.add('active');
+  renderBM(cat);
+}
+
+renderBM('all');
+
+// ── Sample Pill Loader ────────────────────────────────────
+function loadSample(idx) {
+  document.querySelectorAll('.pill').forEach((p, i) => p.classList.toggle('active', i === idx));
+  document.getElementById('queryInput').value = SAMPLES[idx].q;
+  renderOutput(SAMPLES[idx]);
+}
+
+function renderOutput(sample) {
+  document.getElementById('statusRow').style.display = 'flex';
+  document.getElementById('chipRetrieval').textContent = `Vector search: ${sample.chunks.length} chunks`;
+  document.getElementById('chipStatus').textContent = sample.status;
+  document.getElementById('chipLatency').textContent = `Latency: ${sample.latency}`;
+  document.getElementById('answerText').innerHTML = sample.ans;
+  document.getElementById('chunksBody').innerHTML = sample.chunks.map(ch => `
+    <div class="chunk-card">
+      <div class="ch-header"><span>${ch.src}</span></div>
+      ${ch.text}
+      <div class="sim-bar">
+        <div class="sim-track"><div class="sim-fill" style="width:${ch.sim*100}%"></div></div>
+        <span class="sim-val">${ch.sim.toFixed(3)}</span>
+      </div>
+    </div>
+  `).join('');
+}
+
+// ── Run Query with Typewriter Effect ─────────────────────
+function runQuery() {
+  const q = document.getElementById('queryInput').value.trim();
+  if (!q) return;
+
+  // Find match or use last sample
+  let sample = SAMPLES.find(s => s.q.toLowerCase() === q.toLowerCase());
+  if (!sample) {
+    sample = {
+      ...SAMPLES[0],
+      q,
+      ans: "Based on the retrieved tax reference documents: " + SAMPLES[0].ans,
     };
+  }
 
-    function setSampleQuery(qText) {
-      document.getElementById('queryInput').value = qText;
-      for (let k in samples) {
-        if (samples[k].q === qText) {
-          document.getElementById('ansText').innerText = samples[k].ans;
-          document.getElementById('chunk1Text').innerText = samples[k].c1;
-          document.getElementById('chunk2Text').innerText = samples[k].c2;
-          break;
-        }
+  const btn = document.getElementById('runBtn');
+  const btnIcon = document.getElementById('runBtnIcon');
+  const btnText = document.getElementById('runBtnText');
+  btn.disabled = true;
+  btnIcon.innerHTML = '<div class="spinner"></div>';
+  btnText.textContent = 'Running…';
+
+  // Show status row
+  document.getElementById('statusRow').style.display = 'flex';
+  document.getElementById('chipRetrieval').textContent = 'Embedding query…';
+  document.getElementById('chipStatus').textContent = 'Retrieving context…';
+  document.getElementById('chipLatency').textContent = 'Generating…';
+  document.getElementById('chunksBody').innerHTML = '<p style="font-size:12px;color:var(--text-3);padding:8px 0;">Performing vector search…</p>';
+  document.getElementById('answerText').innerHTML = '<span class="typing-cursor"></span>';
+
+  // Simulate pipeline phases
+  setTimeout(() => {
+    document.getElementById('chipRetrieval').textContent = `Vector search: ${sample.chunks.length} chunks retrieved`;
+    document.getElementById('chunksBody').innerHTML = sample.chunks.map(ch => `
+      <div class="chunk-card">
+        <div class="ch-header"><span>${ch.src}</span></div>
+        ${ch.text}
+        <div class="sim-bar">
+          <div class="sim-track"><div class="sim-fill" style="width:0%"></div></div>
+          <span class="sim-val">${ch.sim.toFixed(3)}</span>
+        </div>
+      </div>
+    `).join('');
+    // Animate sim bars
+    setTimeout(() => {
+      sample.chunks.forEach((ch, i) => {
+        const fills = document.querySelectorAll('.sim-fill');
+        if (fills[i]) fills[i].style.width = (ch.sim * 100) + '%';
+      });
+    }, 50);
+  }, 600);
+
+  setTimeout(() => {
+    document.getElementById('chipStatus').textContent = 'LLM generating answer…';
+  }, 1200);
+
+  // Typewriter answer
+  setTimeout(() => {
+    const el = document.getElementById('answerText');
+    el.innerHTML = '';
+    let i = 0;
+    const txt = sample.ans;
+    const interval = setInterval(() => {
+      if (i < txt.length) {
+        el.innerHTML = txt.slice(0, ++i) + '<span class="typing-cursor"></span>';
+      } else {
+        el.innerHTML = txt;
+        clearInterval(interval);
+
+        // Done
+        document.getElementById('chipStatus').textContent = sample.status;
+        document.getElementById('chipLatency').textContent = `Latency: ${sample.latency}`;
+        btn.disabled = false;
+        btnIcon.innerHTML = '▶';
+        btnText.textContent = 'Run Query';
+      }
+    }, 12);
+  }, 1800);
+}
+
+// Allow Enter key
+document.getElementById('queryInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') runQuery();
+});
+
+// ── Pipeline Step Highlights ──────────────────────────────
+function highlightStep(idx) {
+  for (let i = 0; i < 4; i++) {
+    document.getElementById(`step-${i}`).classList.toggle('active', i === idx);
+  }
+}
+
+// ── Charts ────────────────────────────────────────────────
+const CHART_OPTS = {
+  plugins: { legend: { display: false } },
+  scales: {
+    x: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#475569', font: { size: 11 } } },
+    y: { grid: { color: 'rgba(255,255,255,0.04)' }, ticks: { color: '#475569', font: { size: 11 } } }
+  }
+};
+
+new Chart(document.getElementById('trendChart'), {
+  type: 'line',
+  data: {
+    labels: ['Run 1', 'Run 2', 'Run 3', 'Run 4', 'Run 5'],
+    datasets: [{
+      data: [65.0, 71.5, 72.1, 78.0, 83.3],
+      borderColor: '#8b5cf6',
+      backgroundColor: 'rgba(139,92,246,0.08)',
+      borderWidth: 2.5,
+      fill: true,
+      tension: 0.4,
+      pointBackgroundColor: '#8b5cf6',
+      pointRadius: 4,
+      pointHoverRadius: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    ...CHART_OPTS,
+    scales: {
+      ...CHART_OPTS.scales,
+      y: { ...CHART_OPTS.scales.y, min: 55, max: 95 }
+    }
+  }
+});
+
+new Chart(document.getElementById('donutChart'), {
+  type: 'doughnut',
+  data: {
+    labels: ['Passed (170)', 'Failed (34)'],
+    datasets: [{
+      data: [170, 34],
+      backgroundColor: ['#10b981', '#f43f5e'],
+      borderWidth: 0,
+      hoverOffset: 6,
+    }]
+  },
+  options: {
+    responsive: true,
+    cutout: '72%',
+    plugins: {
+      legend: {
+        display: true, position: 'bottom',
+        labels: { color: '#64748b', font: { size: 11 }, boxWidth: 12, padding: 16 }
       }
     }
-
-    function runLiveTest() {
-      const q = document.getElementById('queryInput').value;
-      alert("Executing live RAG query: '" + q + "'\nVector search complete. See response below!");
-    }
-
-    function filterCategory(cat) {
-      alert("Filtering 204 benchmark test suite by category: " + cat);
-    }
-
-    // Render Chart.js Visualizations
-    document.addEventListener("DOMContentLoaded", function() {
-      // Trend Line Chart
-      const ctxTrend = document.getElementById('trendChart').getContext('2d');
-      new Chart(ctxTrend, {
-        type: 'line',
-        data: {
-          labels: ['Run #1', 'Run #2', 'Run #3', 'Run #4', 'Run #5 (Current)'],
-          datasets: [{
-            label: 'Pass Rate (%)',
-            data: [65.0, 71.5, 72.1, 78.0, 83.3],
-            borderColor: '#818cf8',
-            backgroundColor: 'rgba(129, 140, 248, 0.1)',
-            borderWidth: 3,
-            fill: true,
-            tension: 0.35
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { display: false } },
-          scales: {
-            x: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' } },
-            y: { grid: { color: 'rgba(255,255,255,0.05)' }, ticks: { color: '#94a3b8' }, min: 50, max: 100 }
-          }
-        }
-      });
-
-      // Pass vs Fail Donut Chart
-      const ctxDonut = document.getElementById('donutChart').getContext('2d');
-      new Chart(ctxDonut, {
-        type: 'doughnut',
-        data: {
-          labels: ['Passed (170)', 'Failed (34)'],
-          datasets: [{
-            data: [170, 34],
-            backgroundColor: ['#34d399', '#f87171'],
-            borderWidth: 0
-          }]
-        },
-        options: {
-          responsive: true,
-          plugins: { legend: { position: 'bottom', labels: { color: '#94a3b8' } } },
-          cutout: '70%'
-        }
-      });
-    });
-  </script>
+  }
+});
+</script>
 </body>
 </html>

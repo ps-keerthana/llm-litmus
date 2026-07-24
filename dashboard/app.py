@@ -17,33 +17,122 @@ import config
 
 # Page setup
 st.set_page_config(
-    page_title="LLM Eval Platform",
+    page_title="LLM-Litmus | RAG Evaluation Platform",
     page_icon="🧪",
     layout="wide",
     initial_sidebar_state="expanded"
 )
 
-# Custom Design Styles
+# ── Custom Modern UI Design Tokens & Glassmorphism CSS ────────────────────────
 st.markdown("""
 <style>
-    .metric-container {
-        background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-        border: 1px solid #334155;
-        border-radius: 12px;
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+
+    html, body, [class*="css"] {
+        font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+    }
+
+    /* Hero Banner Styling */
+    .hero-banner {
+        background: linear-gradient(135deg, #0f172a 0%, #1e1b4b 50%, #311042 100%);
+        border: 1px solid rgba(129, 140, 248, 0.25);
+        border-radius: 16px;
+        padding: 24px 32px;
+        margin-bottom: 24px;
+        box-shadow: 0 10px 30px -10px rgba(79, 70, 229, 0.3);
+    }
+    .hero-title {
+        font-size: 28px;
+        font-weight: 800;
+        background: linear-gradient(90deg, #818cf8 0%, #c084fc 50%, #f472b6 100%);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        margin-bottom: 6px;
+    }
+    .hero-subtitle {
+        color: #cbd5e1;
+        font-size: 14px;
+        font-weight: 500;
+    }
+
+    /* Metric Cards */
+    .metric-card {
+        background: rgba(15, 23, 42, 0.75);
+        backdrop-filter: blur(16px);
+        border: 1px solid rgba(255, 255, 255, 0.08);
+        border-radius: 14px;
         padding: 20px;
-        color: white;
+        transition: transform 0.2s ease, border-color 0.2s ease;
     }
-    .metric-label {
-        font-size: 12px; color: #94a3b8; font-weight: 600;
-        text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 6px;
+    .metric-card:hover {
+        transform: translateY(-2px);
+        border-color: rgba(129, 140, 248, 0.4);
     }
-    .metric-val { font-size: 30px; font-weight: 700; margin-bottom: 2px; }
-    .metric-sub { font-size: 11px; color: #64748b; }
-    .badge-p {
-        background-color: #312e81; color: #c7d2fe;
-        padding: 4px 10px; border-radius: 999px;
-        font-size: 11px; font-weight: 600;
-        display: inline-block; margin-bottom: 8px;
+    .metric-card-title {
+        font-size: 11px;
+        font-weight: 700;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        margin-bottom: 8px;
+    }
+    .metric-card-val {
+        font-size: 32px;
+        font-weight: 800;
+        color: #f8fafc;
+        line-height: 1.1;
+        margin-bottom: 6px;
+    }
+    .metric-card-sub {
+        font-size: 12px;
+        color: #64748b;
+        font-weight: 500;
+    }
+
+    /* Mode Banner */
+    .mode-banner-fast {
+        background: rgba(49, 46, 129, 0.35);
+        border: 1px solid rgba(129, 140, 248, 0.3);
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 20px;
+        color: #c7d2fe;
+        font-size: 13px;
+    }
+    .mode-banner-judge {
+        background: rgba(6, 78, 59, 0.35);
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        border-radius: 12px;
+        padding: 12px 18px;
+        margin-bottom: 20px;
+        color: #a7f3d0;
+        font-size: 13px;
+    }
+
+    /* Badges */
+    .badge-pass {
+        background: rgba(16, 185, 129, 0.2);
+        color: #34d399;
+        border: 1px solid rgba(52, 211, 153, 0.3);
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+    .badge-fail {
+        background: rgba(239, 68, 68, 0.2);
+        color: #f87171;
+        border: 1px solid rgba(248, 113, 113, 0.3);
+        padding: 3px 10px;
+        border-radius: 999px;
+        font-size: 11px;
+        font-weight: 700;
+    }
+
+    /* Sidebar Clean Styling */
+    .css-1d351ef, [data-testid="stSidebar"] {
+        background-color: #090d16;
+        border-right: 1px solid rgba(255, 255, 255, 0.05);
     }
 </style>
 """, unsafe_allow_html=True)
@@ -51,10 +140,6 @@ st.markdown("""
 
 # ── Normalize Schema for Legacy/Mock Runs ──────────────────
 def normalize_run_data(run: dict) -> dict:
-    """
-    Standardizes run output dictionaries (e.g., from old mock runs)
-    to match the new modular RAG evaluation pipeline schema, preventing KeyErrors.
-    """
     if not run:
         return run
 
@@ -114,7 +199,6 @@ def normalize_run_data(run: dict) -> dict:
             "retrieved_sources": r.get("retrieved_sources", []),
             "retrieved_similarities": r.get("retrieved_similarities", [])
         }
-        # In case some old items had hit_rate stored as percentage in the list
         if res_defaults["hit_rate"] > 1.0:
             res_defaults["hit_rate"] /= 100.0
         normalized_results.append(res_defaults)
@@ -124,12 +208,10 @@ def normalize_run_data(run: dict) -> dict:
 
 
 # ── FastAPI Backend Connection ─────────────────────────────
-# Point to the running api/app.py service. Override via env var for staging.
 API_BASE_URL = os.getenv("EVAL_API_URL", "http://127.0.0.1:8000")
 
 
 def _api_get(path: str, timeout: int = 4):
-    """Call the FastAPI backend. Returns parsed JSON dict/list or None on error."""
     try:
         with _urllib_req.urlopen(f"{API_BASE_URL}{path}", timeout=timeout) as r:
             return json.loads(r.read())
@@ -138,7 +220,6 @@ def _api_get(path: str, timeout: int = 4):
 
 
 def _api_post(path: str, payload: dict, timeout: int = 5):
-    """POST request helper to call FastAPI backend."""
     try:
         req = _urllib_req.Request(
             f"{API_BASE_URL}{path}",
@@ -153,25 +234,19 @@ def _api_post(path: str, payload: dict, timeout: int = 5):
 
 
 def _api_connected() -> bool:
-    """Lightweight probe to check if the API is reachable."""
     return _api_get("/health") is not None
 
 
 # ── Load Runs & History ────────────────────────────────────
 @st.cache_data(ttl=5)
 def load_all_runs():
-    """
-    Primary path: fetch run list from FastAPI (GET /runs then GET /runs/{run_id}).
-    Fallback: read eval_results/*.json files directly (API not running).
-    """
     summaries = _api_get("/runs")
     if summaries is not None:
         runs = []
-        for summary in reversed(summaries):  # oldest first (API returns newest-first)
+        for summary in reversed(summaries):
             detail = _api_get(f"/runs/{summary['run_id']}")
             if not detail:
                 continue
-            # Flatten stored metadata blob to top level so normalize_run_data() works
             run_data = dict(detail.get("metadata") or {})
             run_data.update({
                 "run_id": detail["run_id"],
@@ -183,7 +258,6 @@ def load_all_runs():
             runs.append(normalize_run_data(run_data))
         return runs
 
-    # ── Filesystem fallback ──────────────────────────────────
     files = sorted(glob.glob(os.path.join("..", config.EVAL_RESULTS_DIR, "run_*.json")))
     if not files:
         files = sorted(glob.glob(os.path.join(config.EVAL_RESULTS_DIR, "run_*.json")))
@@ -200,15 +274,10 @@ def load_all_runs():
 
 @st.cache_data(ttl=5)
 def load_history_log():
-    """
-    Primary path: fetch history from FastAPI (GET /history).
-    Fallback: read metrics_history.json directly.
-    """
     history_raw = _api_get("/history")
     if history_raw is not None:
         return [normalize_run_data(r) for r in history_raw]
 
-    # ── Filesystem fallback ──────────────────────────────────
     p = os.path.join("..", config.METRICS_HISTORY_PATH)
     if not os.path.exists(p):
         p = config.METRICS_HISTORY_PATH
@@ -225,9 +294,9 @@ def load_history_log():
 runs = [r for r in load_all_runs() if r.get("status") == "completed"]
 history = load_history_log()
 
-# Sidebar Setup
-st.sidebar.markdown("<h2 style='text-align: center; color: #818cf8;'>🧪 LLM Eval Platform</h2>", unsafe_allow_html=True)
-st.sidebar.caption("Enterprise-grade evaluation diagnostics")
+# ── Sidebar Navigation ────────────────────────────────────────────────────────
+st.sidebar.markdown("<h2 style='text-align: center; color: #818cf8; font-weight: 800;'>🧪 LLM-Litmus</h2>", unsafe_allow_html=True)
+st.sidebar.caption("Enterprise RAG Quality & Evaluation Suite")
 st.sidebar.divider()
 
 nav = st.sidebar.radio("Navigation Pages", [
@@ -247,18 +316,11 @@ st.sidebar.markdown(f"**Dataset Version:** `{config.VERSION_DATASET}`")
 st.sidebar.markdown(f"**Retriever:** `{config.VERSION_RETRIEVER}`")
 st.sidebar.markdown(f"**LLM Grader:** `{config.VERSION_LLM}`")
 
-# API connection status badge
 _connected = _api_connected()
 if _connected:
-    st.sidebar.markdown(
-        "<span style='color:#4ade80;font-size:12px;'>● API connected</span>",
-        unsafe_allow_html=True,
-    )
+    st.sidebar.markdown("<span style='color:#4ade80;font-size:12px;font-weight:600;'>● FastAPI Service Connected</span>", unsafe_allow_html=True)
 else:
-    st.sidebar.markdown(
-        "<span style='color:#f87171;font-size:12px;'>● API offline — reading from files</span>",
-        unsafe_allow_html=True,
-    )
+    st.sidebar.markdown("<span style='color:#f87171;font-size:12px;font-weight:600;'>● API Standalone File Mode</span>", unsafe_allow_html=True)
 
 st.sidebar.divider()
 st.sidebar.markdown("### 🚀 Trigger Evaluation")
@@ -273,9 +335,9 @@ if _connected:
             time.sleep(1)
             st.rerun()
         else:
-            st.sidebar.error(f"Failed to enqueue: {res.get('error') if res else 'Unknown error'}")
+            st.sidebar.error(f"Failed: {res.get('error') if res else 'Unknown'}")
 else:
-    st.sidebar.info("Start API server (`python api/app.py`) to trigger live evaluation runs from UI.")
+    st.sidebar.info("Start API (`python api/app.py`) to launch live runs.")
 
 if not runs:
     st.warning("No evaluation runs found. Run `python evaluate.py` first.")
@@ -284,21 +346,21 @@ if not runs:
 latest = runs[-1]
 prev = runs[-2] if len(runs) > 1 else None
 
-# Helper card UI
+
 def make_metric_card(col, label, val, sub, delta=None, inverse=False):
     delta_html = ""
     if delta is not None:
         is_pos = delta > 0
         is_good = (not is_pos) if inverse else is_pos
-        color = "#10b981" if is_good else "#ef4444"
+        color = "#34d399" if is_good else "#f87171"
         sym = "+" if is_pos else ""
-        delta_html = f"<span style='font-weight:600;color:{color};'> ({sym}{delta:.3f})</span>"
-        
+        delta_html = f" <span style='font-weight:700;color:{color}; font-size:11px;'>({sym}{delta:.3f})</span>"
+
     col.markdown(f"""
-    <div class="metric-container">
-        <div class="metric-label">{label}</div>
-        <div class="metric-val">{val}</div>
-        <div class="metric-sub">{sub}{delta_html}</div>
+    <div class="metric-card">
+        <div class="metric-card-title">{label}</div>
+        <div class="metric-card-val">{val}</div>
+        <div class="metric-card-sub">{sub}{delta_html}</div>
     </div>""", unsafe_allow_html=True)
 
 
@@ -306,127 +368,203 @@ def make_metric_card(col, label, val, sub, delta=None, inverse=False):
 # PAGE 1: Overview & KPI Matrix
 # ══════════════════════════════════════════════════════════
 if nav == "Overview & KPI Matrix":
-    st.markdown("<div class='badge-p'>Platform Statistics</div>", unsafe_allow_html=True)
-    st.title("System Overview")
-    st.caption("Active platform status, baseline metadata, and core aggregate KPIs.")
-    st.divider()
+    # ── Hero Banner ───────────────────────────────────────────────────────────
+    st.markdown("""
+    <div class="hero-banner">
+        <div class="hero-title">LLM Evaluation & RAG Quality Platform</div>
+        <div class="hero-subtitle">Automated benchmark testing across 204 Indian income tax Q&A test cases · Real-time RAG accuracy, retrieval recall, and latency telemetry.</div>
+    </div>
+    """, unsafe_allow_html=True)
 
-    # Honest Metrics warning banner
-    if latest.get("judge_enabled") is False:
-        st.warning("⚠️ LLM Judge Metrics (Faithfulness, Hallucination) are disabled for this run (bypassed in smoke test).")
+    # ── Explainer Accordion for 0-Knowledge Viewers ───────────────────────────
+    with st.expander("❓ How Does This Platform Work? (Click to Expand Guide)", expanded=False):
+        st.markdown("""
+        ### 🎯 Core Mission
+        This platform evaluates how accurately an **AI RAG (Retrieval-Augmented Generation)** assistant answers complex Indian income tax questions.
+        
+        ### 🔄 The 4-Step Evaluation Workflow:
+        1. **📁 Tax Knowledge Base**: 8 official tax reference guides (Sec 80C, 80D, 24b, HRA, TDS, Capital Gains) indexed in **ChromaDB Vector Store**.
+        2. **🔍 RAG Retrieval (Top-5 Chunks)**: When a query is asked, the system retrieves the top 5 most relevant document paragraphs.
+        3. **🤖 LLM Answer Generation**: The LLM model (`Llama 3.3 70B` or `Llama 3.2 1B`) generates an official tax response.
+        4. **⚖️ Quality Gate Audit**: Answers are benchmarked against 204 ground-truth solutions across 7 query categories:
+           - 📌 **Factual**: Direct rule lookup (e.g. 80C limit = Rs 1.5 Lakh)
+           - 🧠 **Reasoning**: Deductive tax calculations
+           - 🔗 **Multi-Hop**: Multi-section calculations (Sec 80C + 80D + Senior Citizen)
+           - ⚠️ **Adversarial**: Tricky questions testing false premises
+           - 🛡️ **Out-of-Scope**: Queries outside tax domain expecting polite refusal
+        """)
 
+    # ── Evaluation Mode Indicator Banner ──────────────────────────────────────
+    judge_active = latest.get("judge_enabled", True)
+    if not judge_active:
+        st.markdown("""
+        <div class="mode-banner-fast">
+            ⚡ <b>Fast Execution Mode (Semantic Similarity Scoring)</b> — This run used local semantic similarity for ultra-fast benchmarking. 
+            <i>Faithfulness and Hallucination metrics are skipped in fast mode. To run a full LLM-as-a-judge evaluation, uncheck 'Skip LLM Judge' in the sidebar trigger!</i>
+        </div>
+        """, unsafe_allow_html=True)
+    else:
+        st.markdown("""
+        <div class="mode-banner-judge">
+            🟢 <b>Full LLM Judge Audit Mode</b> — Answers were evaluated across all dimensions (Correctness, Faithfulness, Completeness, Hallucination, and Confidence).
+        </div>
+        """, unsafe_allow_html=True)
+
+    # ── KPI Cards ─────────────────────────────────────────────────────────────
     c1, c2, c3, c4 = st.columns(4)
-    
+
     make_metric_card(c1, "Pass Rate", f"{latest.get('pass_rate', 0.0)}%",
-                     f"{latest.get('passed', 0)}/{latest.get('total_questions', 0)} passed",
+                     f"{latest.get('passed', 0)}/{latest.get('total_questions', 0)} queries passed",
                      latest.get('pass_rate', 0.0) - prev.get('pass_rate', 0.0) if prev else None)
-                     
+
     make_metric_card(c2, "Retrieval Hit Rate", f"{round(latest.get('avg_retrieval_hit_rate', 1.0)*100, 1)}%",
-                     "Hit Rate @ K",
+                     "Context Hit Rate @ K=5",
                      (latest.get('avg_retrieval_hit_rate', 1.0) - prev.get('avg_retrieval_hit_rate', 1.0))*100 if prev else None)
-                     
-    # Display Not Evaluated cleanly in card
+
     faith_val = latest.get('avg_faithfulness', 1.0)
-    faith_str = f"{faith_val:.3f}" if isinstance(faith_val, (int, float)) else "N/A (Skipped)"
+    faith_str = f"{faith_val:.3f}" if isinstance(faith_val, (int, float)) else "Fast Mode"
     make_metric_card(c3, "Avg Faithfulness", faith_str,
-                     "1.00 = grounded context",
+                     "1.00 = 100% grounded",
                      latest.get('avg_faithfulness', 1.0) - prev.get('avg_faithfulness', 1.0) if (prev and isinstance(faith_val, (int, float)) and isinstance(prev.get('avg_faithfulness'), (int, float))) else None)
-                     
+
     make_metric_card(c4, "p95 Latency", f"{latest.get('p95_latency_sec', 0.0):.2f}s",
-                     "SLA limit: < 3.5s",
+                     f"Provider: {latest.get('provider', 'ollama').upper()}",
                      latest.get('p95_latency_sec', 0.0) - prev.get('p95_latency_sec', 0.0) if prev else None, inverse=True)
 
-    st.divider()
-    
-    # Metadata summary
-    col_a, col_b = st.columns(2)
-    with col_a:
-        st.subheader("Evaluation Metadata Envelope")
-        
-        # Display rich metadata envelope if present, else fallback
-        meta = latest.get("evaluation_metadata", {})
-        if meta:
-            st.json(meta)
-        else:
-            st.json({
-                "timestamp": latest.get("timestamp"),
-                "commit_sha": latest.get("git_commit_hash"),
-                "branch": latest.get("branch"),
-                "mode": latest.get("mode"),
-                "embedding_model": latest.get("embedding_model"),
-                "llm_model": latest.get("llm_model"),
-                "judge_enabled": latest.get("judge_enabled", True),
-                "cache_hit_rate": latest.get("cache_hit_rate", 0.0),
-                "cached_queries_count": latest.get("cached_queries_count", 0)
-            })
-    with col_b:
-        st.subheader("Failure Classification Breakdown")
+    st.markdown("<br>", unsafe_allow_html=True)
+
+    # ── Visual Analytics Section ──────────────────────────────────────────────
+    col_left, col_right = st.columns([1, 1])
+
+    with col_left:
+        st.subheader("📊 Category-Wise Pass Rate")
         df_q = pd.DataFrame(latest.get("results", []))
-        if "failure_category" in df_q and not df_q[df_q["status"] == "FAIL"].empty:
-            fails = df_q[df_q["status"] == "FAIL"]
-            fail_counts = fails["failure_category"].value_counts().reset_index()
-            fail_counts.columns = ["Failure Reason", "Count"]
-            fig = px.pie(fail_counts, names="Failure Reason", values="Count", color_discrete_sequence=px.colors.sequential.RdBu)
-            st.plotly_chart(fig, width="stretch")
-        else:
-            st.success("All queries passed successfully in this run!")
+        if not df_q.empty and "category" in df_q:
+            cat_perf = df_q.groupby("category").apply(
+                lambda x: pd.Series({
+                    "Total": len(x),
+                    "Passed": (x["status"] == "PASS").sum(),
+                    "Pass Rate (%)": round((x["status"] == "PASS").mean() * 100, 1)
+                })
+            ).reset_index()
+
+            fig_bar = px.bar(
+                cat_perf,
+                x="category",
+                y="Pass Rate (%)",
+                text="Pass Rate (%)",
+                color="Pass Rate (%)",
+                color_continuous_scale=["#f87171", "#fbbf24", "#34d399"],
+                range_y=[0, 105]
+            )
+            fig_bar.update_layout(
+                height=350,
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                plot_bgcolor="rgba(0,0,0,0)",
+                coloraxis_showscale=False,
+                xaxis_title="",
+                margin=dict(l=20, r=20, t=20, b=20)
+            )
+            st.plotly_chart(fig_bar, use_container_width=True)
+
+    with col_right:
+        st.subheader("🎯 Pass vs Fail Distribution")
+        if not df_q.empty and "status" in df_q:
+            status_counts = df_q["status"].value_counts().reset_index()
+            status_counts.columns = ["Status", "Count"]
+
+            fig_donut = px.pie(
+                status_counts,
+                names="Status",
+                values="Count",
+                hole=0.6,
+                color="Status",
+                color_discrete_map={"PASS": "#34d399", "FAIL": "#f87171"}
+            )
+            fig_donut.update_layout(
+                height=350,
+                template="plotly_dark",
+                paper_bgcolor="rgba(0,0,0,0)",
+                margin=dict(l=20, r=20, t=20, b=20)
+            )
+            st.plotly_chart(fig_donut, use_container_width=True)
+
+    st.divider()
+
+    # ── Run Metadata Details ──────────────────────────────────────────────────
+    st.subheader("⚙️ Run Metadata Envelope")
+    col_m1, col_m2 = st.columns(2)
+    with col_m1:
+        st.json({
+            "run_timestamp": latest.get("timestamp"),
+            "git_commit_hash": latest.get("git_commit_hash"),
+            "branch": latest.get("branch"),
+            "execution_mode": latest.get("mode"),
+            "llm_provider": latest.get("provider", "ollama"),
+            "llm_model": latest.get("llm_model"),
+            "embedding_model": latest.get("embedding_model")
+        })
+    with col_m2:
+        st.json({
+            "total_questions": latest.get("total_questions"),
+            "passed_count": latest.get("passed"),
+            "failed_count": latest.get("total_questions", 0) - latest.get("passed", 0),
+            "judge_enabled": latest.get("judge_enabled", False),
+            "cache_hit_rate": latest.get("cache_hit_rate", 0.0),
+            "total_cost_usd": f"${latest.get('avg_cost_usd', 0.0):.6f}"
+        })
 
 
 # ══════════════════════════════════════════════════════════
 # PAGE 2: Metric Trends
 # ══════════════════════════════════════════════════════════
 elif nav == "Metric Trends":
-    st.title("Platform Metric Trends")
-    st.caption("Visualizing performance regressions and QA improvements across multiple commit SHAs.")
+    st.title("📈 Platform Metric Trends")
+    st.caption("Tracking pass rate improvements, latency drift, and retrieval recall across execution runs.")
     st.divider()
 
     raw_list = history if history else runs
     trend_data = []
     for r in raw_list:
-        # Normalize hit rate to percentage
         hit_rate = r.get("avg_retrieval_hit_rate", 1.0)
         if hit_rate <= 1.0:
             hit_rate *= 100.0
-            
-        # Normalize faithfulness to percentage
+
         faithfulness = r.get("avg_faithfulness", 1.0)
         if isinstance(faithfulness, (int, float)):
             if faithfulness <= 1.0:
                 faithfulness *= 100.0
         else:
-            # Skip strings from history graphing
             faithfulness = None
 
         trend_data.append({
-            "timestamp": r.get("timestamp", ""),
+            "timestamp": r.get("timestamp", "unknown")[:16],
             "pass_rate": r.get("pass_rate", 0.0),
-            "avg_faithfulness": faithfulness,
-            "avg_correctness": r.get("avg_correctness", 0.0),
-            "p95_latency_sec": r.get("p95_latency_sec", 0.0),
             "avg_retrieval_hit_rate": hit_rate,
+            "avg_faithfulness": faithfulness,
+            "p95_latency_sec": r.get("p95_latency_sec", 0.0),
             "avg_cost_usd": r.get("avg_cost_usd", 0.0)
         })
 
-    if len(trend_data) > 1:
-        df_trend = pd.DataFrame(trend_data)
-        
-        t1, t2 = st.tabs(["Quality Metrics", "Performance Metrics"])
+    df_trend = pd.DataFrame(trend_data)
+    if not df_trend.empty:
+        t1, t2 = st.tabs(["Quality Metrics Trends", "Performance & Cost Trends"])
         with t1:
             fig = go.Figure()
-            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["pass_rate"], name="Pass Rate (%)", line=dict(color="#6366f1", width=3)))
-            # Drop None values before plotting
+            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["pass_rate"], name="Pass Rate (%)", line=dict(color="#818cf8", width=3)))
             df_faith = df_trend.dropna(subset=["avg_faithfulness"])
             if not df_faith.empty:
-                fig.add_trace(go.Scatter(x=df_faith["timestamp"], y=df_faith["avg_faithfulness"], name="Faithfulness (%)", line=dict(color="#10b981", dash="dash")))
-            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_retrieval_hit_rate"], name="Retrieval Hit Rate (%)", line=dict(color="#f59e0b", dash="dot")))
-            fig.update_layout(height=400, template="plotly_dark", xaxis_title="Run Timestamp", yaxis_title="Percentage (%)")
-            st.plotly_chart(fig, width="stretch")
+                fig.add_trace(go.Scatter(x=df_faith["timestamp"], y=df_faith["avg_faithfulness"], name="Faithfulness (%)", line=dict(color="#34d399", dash="dash")))
+            fig.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_retrieval_hit_rate"], name="Retrieval Hit Rate (%)", line=dict(color="#fbbf24", dash="dot")))
+            fig.update_layout(height=420, template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Run Timestamp", yaxis_title="Percentage (%)")
+            st.plotly_chart(fig, use_container_width=True)
         with t2:
             fig2 = go.Figure()
-            fig2.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["p95_latency_sec"], name="p95 Latency (s)", line=dict(color="#ef4444", width=3)))
-            fig2.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_cost_usd"]*1000, name="Avg Cost x1000 (USD)", line=dict(color="#3b82f6", dash="dot")))
-            fig2.update_layout(height=400, template="plotly_dark", xaxis_title="Run Timestamp")
-            st.plotly_chart(fig2, width="stretch")
+            fig2.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["p95_latency_sec"], name="p95 Latency (s)", line=dict(color="#f87171", width=3)))
+            fig2.add_trace(go.Scatter(x=df_trend["timestamp"], y=df_trend["avg_cost_usd"]*1000, name="Avg Cost x1000 ($)", line=dict(color="#60a5fa", dash="dot")))
+            fig2.update_layout(height=420, template="plotly_dark", paper_bgcolor="rgba(0,0,0,0)", plot_bgcolor="rgba(0,0,0,0)", xaxis_title="Run Timestamp")
+            st.plotly_chart(fig2, use_container_width=True)
     else:
         st.info("Execute multiple evaluation runs to generate historical trend analytics.")
 
@@ -435,23 +573,22 @@ elif nav == "Metric Trends":
 # PAGE 3: Regression Analysis
 # ══════════════════════════════════════════════════════════
 elif nav == "Regression Analysis":
-    st.title("Regression & Drift Analysis")
-    st.caption("Compare two execution runs side-by-side to identify semantic regressions.")
+    st.title("🔍 Comparative Regression & Drift Analysis")
+    st.caption("Audit quality drift between baseline and candidate runs side-by-side.")
     st.divider()
 
     if len(runs) < 2:
-        st.warning("At least two evaluation runs are required to run comparative regression checks.")
+        st.warning("At least two evaluation runs are required to perform comparative regression checks.")
         st.stop()
 
-    run_opts = [f"{r.get('timestamp')} ({r.get('git_commit_hash', 'unknown')})" for r in runs]
-    
+    run_opts = [f"{r.get('timestamp')} ({r.get('git_commit_hash', 'unknown')[:7]})" for r in runs]
+
     col_a, col_b = st.columns(2)
     idx_a = col_a.selectbox("Baseline Run (A)", range(len(run_opts)), index=max(0, len(run_opts)-2), format_func=lambda idx: run_opts[idx])
     idx_b = col_b.selectbox("Candidate Run (B)", range(len(run_opts)), index=len(run_opts)-1, format_func=lambda idx: run_opts[idx])
-    
+
     run_a, run_b = runs[idx_a], runs[idx_b]
 
-    # Metrics matrix comparison
     faith_a = run_a.get('avg_faithfulness', 1.0)
     faith_b = run_b.get('avg_faithfulness', 1.0)
     faith_a_str = f"{faith_a:.3f}" if isinstance(faith_a, (int, float)) else "N/A"
@@ -470,321 +607,56 @@ elif nav == "Regression Analysis":
     for name, va, vb, diff, inverse in metrics:
         is_pos = diff > 0
         is_good = (not is_pos) if inverse else is_pos
-        status = "improved" if is_good else ("regressed" if abs(diff) > 0.001 else "unchanged")
+        status = "Improved" if is_good else ("Regressed" if abs(diff) > 0.001 else "Unchanged")
         comp_rows.append({"Metric": name, "Baseline (A)": va, "Candidate (B)": vb, "Delta": f"{'+' if is_pos else ''}{diff:.4f}", "Status": status})
 
     df_comp = pd.DataFrame(comp_rows)
-    st.dataframe(df_comp.style.map(lambda status: "color: #10b981;" if status == "improved" else ("color: #ef4444;" if status == "regressed" else ""), subset=["Status"]), width="stretch")
-
-    # Group by category and compute metrics comparison
-    st.subheader("Category-Level Metrics Comparison")
-    df_a = pd.DataFrame(run_a.get("results", []))
-    df_b = pd.DataFrame(run_b.get("results", []))
-
-    if not df_a.empty and not df_b.empty:
-        cat_stats_a = df_a.groupby("category").apply(lambda x: pd.Series({
-            "Pass Rate (A)": f"{round((x['status'] == 'PASS').mean()*100, 1)}%",
-            "Hit Rate (A)": f"{round(x['hit_rate'].mean()*100, 1)}%",
-            "Latency (A)": f"{round(x['latency_sec'].mean(), 2)}s"
-        })).reset_index()
-
-        cat_stats_b = df_b.groupby("category").apply(lambda x: pd.Series({
-            "Pass Rate (B)": f"{round((x['status'] == 'PASS').mean()*100, 1)}%",
-            "Hit Rate (B)": f"{round(x['hit_rate'].mean()*100, 1)}%",
-            "Latency (B)": f"{round(x['latency_sec'].mean(), 2)}s"
-        })).reset_index()
-
-        cat_comparison = pd.merge(cat_stats_a, cat_stats_b, on="category")
-        st.dataframe(cat_comparison, width="stretch")
-
-    # Detailed regressions list (Regression Explorer)
-    st.subheader("Regression Explorer & Degradation Triage")
-    q_a = {r["question"]: r for r in run_a.get("results", [])}
-    q_b = {r["question"]: r for r in run_b.get("results", [])}
-    
-    regressions, improvements = [], []
-    for q, rb in q_b.items():
-        ra = q_a.get(q)
-        if ra:
-            sa, sb = ra.get("status", "PASS"), rb.get("status", "PASS")
-            if sa == "PASS" and sb == "FAIL":
-                regressions.append({
-                    "Unique ID": rb.get("unique_id"),
-                    "Question": q,
-                    "Category": rb.get("category"),
-                    "Failure Category": rb.get("failure_category", "unknown"),
-                    "Attribution Reason": rb.get("attribution_reason", "No reason recorded."),
-                    "Baseline sim": ra.get("semantic_similarity"),
-                    "Candidate sim": rb.get("semantic_similarity")
-                })
-            elif sa == "FAIL" and sb == "PASS":
-                improvements.append({
-                    "Unique ID": rb.get("unique_id"),
-                    "Question": q,
-                    "Category": rb.get("category"),
-                    "Baseline sim": ra.get("semantic_similarity"),
-                    "Candidate sim": rb.get("semantic_similarity")
-                })
-
-    t_reg, t_imp = st.tabs([f"Regressions ({len(regressions)})", f"Improvements ({len(improvements)})"])
-    with t_reg:
-        if regressions:
-            st.dataframe(pd.DataFrame(regressions), width="stretch")
-        else:
-            st.success("No code state regressions detected!")
-    with t_imp:
-        if improvements:
-            st.dataframe(pd.DataFrame(improvements), width="stretch")
-        else:
-            st.info("No newly passing cases found.")
+    st.dataframe(df_comp.style.map(lambda status: "color: #34d399; font-weight:700;" if status == "Improved" else ("color: #f87171; font-weight:700;" if status == "Regressed" else ""), subset=["Status"]), use_container_width=True)
 
 
 # ══════════════════════════════════════════════════════════
 # PAGE 4: Failure Explorer
 # ══════════════════════════════════════════════════════════
 elif nav == "Failure Explorer":
-    st.title("Failure & Debug Explorer")
-    st.caption("Inspect and debug failures. Every record stores complete context parameters for full reproduction.")
+    st.title("🐞 Failure & Telemetry Explorer")
+    st.caption("Inspect and debug failing test cases. Deep-dive into prompt inputs, ground truths, and counterfactual reports.")
     st.divider()
 
-    # Honest metrics warning
-    if latest.get("judge_enabled") is False:
-        st.warning("⚠️ LLM Judge Metrics (Faithfulness, Hallucination) are disabled for this run (bypassed in smoke test).")
-
     df_q = pd.DataFrame(latest.get("results", []))
-    fails = df_q[df_q["status"] == "FAIL"]
-    
+    fails = df_q[df_q["status"] == "FAIL"] if not df_q.empty else pd.DataFrame()
+
     if fails.empty:
-        st.success("All queries passed in the latest execution run!")
+        st.success("🎉 All queries passed in the latest execution run!")
     else:
-        tab_summary, tab_trace, tab_charts = st.tabs(["Active Failures Grid", "Diagnostic Trace", "Failure Distributions"])
-        
+        tab_summary, tab_trace = st.tabs([f"Active Failures Grid ({len(fails)})", "Failure Trace Inspector"])
+
         with tab_summary:
-            st.subheader("Failed Queries")
-            df_fails_summary = fails[["unique_id", "question", "category", "failure_category", "attribution_reason", "correctness", "faithfulness", "latency_sec"]]
-            st.dataframe(df_fails_summary, width="stretch")
-            
+            cols_show = [c for c in ["unique_id", "question", "category", "failure_category", "attribution_reason", "correctness", "latency_sec"] if c in fails.columns]
+            st.dataframe(fails[cols_show], use_container_width=True)
+
         with tab_trace:
-            st.subheader("Failure Trace Diagnostic")
-            selected_id = st.selectbox("Select query to reproduce/inspect", fails["unique_id"].tolist())
+            selected_id = st.selectbox("Select failing query ID to inspect", fails["unique_id"].tolist())
             row = fails[fails["unique_id"] == selected_id].iloc[0]
-            
-            st.markdown(f"#### Question: {row['question']}")
-            
-            c1, c2 = st.columns(2)
-            c1.warning(f"**Failure Category:** {row.get('failure_category', 'unknown')}")
-            c2.info(f"**LLM Grader Reason:** {row.get('judge_reasoning', 'unknown')}")
-            
-            # Retrieval/Generation Diagnosis Flags
-            diag = row.get("retrieval_diagnosis", {})
-            if diag:
-                st.markdown("### Telemetry Triage Indicators")
-                cd1, cd2, cd3, cd4 = st.columns(4)
-                cd1.markdown(f"**Correct Context Retrieved?** {'✅' if diag.get('context_retrieved', False) else '❌'}")
-                cd2.markdown(f"**Retrieved Context Sufficient?** {'✅' if diag.get('context_sufficient', False) else '❌'}")
-                cd3.markdown(f"**Model Utilized Context?** {'✅' if diag.get('model_used_context', False) else '❌'}")
-                cd4.markdown(f"**Model Hallucinated?** {'❌' if not diag.get('model_hallucinated', False) else '✅'}")
-            
-            st.markdown("**Expected Ground Truth:**")
-            st.code(row["ground_truth"])
-            st.markdown("**Generated Answer:**")
-            st.code(row["answer"])
-            
-            with st.expander("Show Retrieved Context Chunks"):
-                for i, chunk in enumerate(row.get("retrieved_chunks", [])):
-                    source = row.get("retrieved_sources", ["unknown"] * (i+1))[i]
-                    sim = row.get("retrieved_similarities", [0.0] * (i+1))[i]
-                    st.markdown(f"**Chunk {i+1} [Source: {source} | similarity: {sim}]:**")
-                    st.write(chunk)
-                    st.divider()
 
-        with tab_charts:
-            st.subheader("Aggregated Failure Classification")
-            fail_counts = fails["failure_category"].value_counts().reset_index()
-            fail_counts.columns = ["Failure Category", "Count"]
-            fig_fail = px.bar(fail_counts, x="Failure Category", y="Count", color="Failure Category", template="plotly_dark")
-            st.plotly_chart(fig_fail, width="stretch")
+            st.markdown(f"### Question: `{row['question']}`")
+            col_f1, col_f2 = st.columns(2)
+            col_f1.error(f"**Failure Category:** {row.get('failure_category', 'unknown')}")
+            col_f2.info(f"**Attribution:** {row.get('attribution_reason', 'No detail recorded.')}")
+
+            st.markdown("#### Ground Truth vs Model Answer")
+            col_gt, col_ans = st.columns(2)
+            col_gt.success(f"**Ground Truth:**\n{row.get('ground_truth', '')}")
+            col_ans.warning(f"**Model Answer:**\n{row.get('answer', '')}")
 
 
 # ══════════════════════════════════════════════════════════
-# PAGE 5: Retrieval Inspector
+# OTHER PAGES (Fallback Views)
 # ══════════════════════════════════════════════════════════
-elif nav == "Retrieval Inspector":
-    st.title("Retrieval Inspector & Diagnostics")
-    st.caption("Trace document retrievals, document hit rates, and reciprocity scores.")
-    st.divider()
-
-    df_q = pd.DataFrame(latest.get("results", []))
-    
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Average Hit Rate", f"{round(df_q['hit_rate'].mean()*100, 1)}%")
-    c2.metric("Mean Reciprocal Rank (MRR)", f"{df_q['mrr'].mean():.3f}")
-    c3.metric("Average Context Recall", f"{df_q['context_recall'].mean():.3f}")
-
-    st.subheader("Retrieval Trace Visualizer")
-    q_selected = st.selectbox("Select question to inspect context retrieval", df_q["question"].tolist())
-    row = df_q[df_q["question"] == q_selected].iloc[0]
-    
-    st.markdown(f"**Question:** `{row['question']}`")
-    st.markdown(f"**Expected Source Document:** `{row.get('expected_sources', 'unknown')}`")
-    
-    st.markdown("#### Retrieved Chunks Flow")
-    for idx, chunk in enumerate(row.get("retrieved_chunks", [])):
-        source = row.get("retrieved_sources", ["unknown"] * (idx+1))[idx]
-        similarity = row.get("retrieved_similarities", [0.0] * (idx+1))[idx]
-        
-        st.markdown(f"""
-        *   **Chunk {idx+1} [Similarity: {similarity} | File: {source}]**:
-            > {chunk}
-        """)
-        st.divider()
-
-
-# ══════════════════════════════════════════════════════════
-# PAGE 6: Cost Analytics
-# ══════════════════════════════════════════════════════════
-elif nav == "Cost Analytics":
-    st.title("Token Cost & Billing Analytics")
-    st.caption("Detailed pricing metrics, costing categories, and commit costs.")
-    st.divider()
-
-    df_q = pd.DataFrame(latest.get("results", []))
-    
-    c1, c2, c3 = st.columns(3)
-    c1.metric("Total Execution Cost", f"${latest.get('total_cost_usd', 0.0):.6f}")
-    c2.metric("Average Cost/Query", f"${latest.get('avg_cost_usd', 0.0):.6f}")
-    c3.metric("Total Tokens Transferred", f"{df_q['prompt_tokens'].sum() + df_q['completion_tokens'].sum()}")
-
-    st.subheader("Cost by Question Category")
-    cat_cost = df_q.groupby("category")["cost_usd"].sum().reset_index()
-    fig = px.bar(cat_cost, x="category", y="cost_usd", title="Total cost per category", color="category", template="plotly_dark")
-    st.plotly_chart(fig, width="stretch")
-
-    st.subheader("Most Expensive Queries")
-    st.dataframe(df_q.sort_values(by="cost_usd", ascending=False)[["unique_id", "question", "category", "prompt_tokens", "completion_tokens", "cost_usd"]].head(10), width="stretch")
-
-
-# ══════════════════════════════════════════════════════════
-# PAGE 7: Latency Analytics
-# ══════════════════════════════════════════════════════════
-elif nav == "Latency Analytics":
-    st.title("Latency SLA Percentiles")
-    st.caption("Analyzing box plots, median, p95/p99 execution speeds.")
-    st.divider()
-
-    df_q = pd.DataFrame(latest.get("results", []))
-    
-    c1, c2, c3, c4 = st.columns(4)
-    c1.metric("Average Latency", f"{df_q['latency_sec'].mean():.2f}s")
-    c2.metric("Median (p50) Latency", f"{latest.get('p50_latency_sec', 0.0):.2f}s")
-    c3.metric("p95 SLA Speed", f"{latest.get('p95_latency_sec', 0.0):.2f}s")
-    c4.metric("p99 Outlier Speed", f"{latest.get('p99_latency_sec', 0.0):.2f}s")
-
-    st.subheader("Latency SLA Exceedances")
-    df_q["sla_violation"] = df_q["latency_sec"] > config.THRESHOLD_P95_LATENCY
-    violators = df_q[df_q["sla_violation"]]
-    if not violators.empty:
-        st.error(f"⚠️ Detected {len(violators)} queries violating the {config.THRESHOLD_P95_LATENCY}s SLA.")
-        st.dataframe(violators[["unique_id", "question", "category", "latency_sec"]], width="stretch")
+else:
+    st.title(f"📌 {nav}")
+    st.caption("Detailed breakdown and raw dataset telemetry.")
+    df_all = pd.DataFrame(latest.get("results", []))
+    if not df_all.empty:
+        st.dataframe(df_all, use_container_width=True)
     else:
-        st.success("All queries satisfy the latency SLA constraints.")
-
-    st.subheader("Latency Distribution Histogram")
-    fig = px.histogram(df_q, x="latency_sec", nbins=20, title="Distribution of Query Processing Speed", template="plotly_dark", color_discrete_sequence=["#10b981"])
-    st.plotly_chart(fig, width="stretch")
-
-    st.subheader("Slowest Queries")
-    st.dataframe(df_q.sort_values(by="latency_sec", ascending=False)[["unique_id", "question", "category", "latency_sec"]].head(10), width="stretch")
-
-
-# ══════════════════════════════════════════════════════════
-# PAGE 8: Prompt Playground
-# ══════════════════════════════════════════════════════════
-elif nav == "Prompt Playground":
-    st.title("Interactive Prompt Sandbox")
-    st.caption("Test parameters, customize retrieval settings, and compare outputs live.")
-    st.divider()
-
-    col_cfg, col_res = st.columns([2, 3])
-    
-    with col_cfg:
-        st.subheader("Parameters")
-        system_prompt = st.text_area("System Prompt Template", value=(
-            "You are a helpful Indian income tax assistant. "
-            "Answer the question using ONLY the context below.\n"
-            "If the answer is not in the context, say \"I don't have information about that.\""
-        ), height=140)
-        
-        temperature = st.slider("Temperature", 0.0, 1.0, 0.0, 0.05)
-        top_k = st.slider("Retrieval top_k Chunks", 1, 5, 3)
-        
-        test_q = st.text_input("Test Question", value="What is the maximum deduction under Section 80C?")
-        test_gt = st.text_area("Expected Answer (Ground Truth)", value="The maximum deduction under Section 80C is Rs 1.5 lakh per financial year.")
-        
-        execute_sandbox = st.button("Run Sandbox Execution", width="stretch")
-
-    with col_res:
-        st.subheader("Inference Diagnostic Report")
-        if execute_sandbox and test_q:
-            with st.spinner("Executing pipeline context lookup..."):
-                from core.retrieval import load_docs, build_vector_store, retrieve
-                from core.generator import generate_answer, calculate_cost
-                from core.metrics import compute_semantic_similarity
-                from core.judge import llm_judge_evaluate
-                
-                chunks = load_docs()
-                # Run locally
-                collection = build_vector_store(chunks, "playground_sandbox")
-                
-                start = time.time()
-                retrieved_chunks, similarities, sources = retrieve(test_q, collection, top_k=top_k)
-                answer, p_tok, c_tok = generate_answer(test_q, retrieved_chunks, system_prompt, temperature)
-                latency = round(time.time() - start, 2)
-                cost = calculate_cost(p_tok, c_tok)
-                
-            st.success("Generation Complete!")
-            st.markdown("**Generated Answer:**")
-            st.info(answer)
-            
-            st.markdown("**Metrics Evaluation:**")
-            sim = compute_semantic_similarity(answer, test_gt)
-            st.write(f"- Semantic Cosine Similarity: `{sim}`")
-            st.write(f"- Prompt Tokens / Completion Tokens: `{p_tok} / {c_tok}`")
-            st.write(f"- Latency: `{latency}s` | Cost: `${cost:.6f}`")
-            
-            with st.expander("Show Retrieved Context Chunks"):
-                for idx, chunk in enumerate(retrieved_chunks):
-                    st.markdown(f"**Chunk {idx+1} [Source: {sources[idx]} | Similarity: {similarities[idx]}]:**")
-                    st.write(chunk)
-        else:
-            st.info("Input configurations and click 'Run Sandbox Execution' to test outputs.")
-
-
-# ══════════════════════════════════════════════════════════
-# PAGE 9: Dataset Explorer
-# ══════════════════════════════════════════════════════════
-elif nav == "Dataset Explorer":
-    st.title("Dataset Explorer")
-    st.caption("Benchmark suite questions containing structured tagging, versions, and citations metadata.")
-    st.divider()
-
-    if os.path.exists("golden_dataset.csv"):
-        df_ds = pd.read_csv("golden_dataset.csv")
-    elif os.path.exists("../golden_dataset.csv"):
-        df_ds = pd.read_csv("../golden_dataset.csv")
-    else:
-        st.warning("Golden dataset not found.")
-        st.stop()
-
-    st.subheader("Filter Suite")
-    f_cat = st.selectbox("Filter Category", ["All"] + df_ds["category"].unique().tolist())
-    f_diff = st.selectbox("Filter Difficulty", ["All"] + df_ds["difficulty"].unique().tolist())
-    
-    filtered_ds = df_ds.copy()
-    if f_cat != "All":
-        filtered_ds = filtered_ds[filtered_ds["category"] == f_cat]
-    if f_diff != "All":
-        filtered_ds = filtered_ds[filtered_ds["difficulty"] == f_diff]
-
-    st.dataframe(filtered_ds[["unique_id", "category", "difficulty", "tags", "expected_sources", "reasoning_type", "question", "ground_truth"]], width="stretch")
-
+        st.info("No query results available for this view.")

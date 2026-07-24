@@ -1,0 +1,23 @@
+Home Loan Tax Deductions - Section 24(b) and Section 80C
+
+Interest Deduction under Section 24(b):
+Taxpayers can claim a deduction on interest paid on home loans taken for purchase, construction, repair, or renewal of a house property.
+
+1. Self-Occupied Property Limit:
+   - Deduction on home loan interest for a self-occupied property is capped at Rs 2,00,000 per financial year.
+   - To claim the maximum limit of Rs 2 lakh, the loan must be taken on or after April 1, 1999, and the construction/acquisition must be completed within 5 years from the end of the financial year in which the loan was taken.
+   - If construction takes longer than 5 years, the maximum deduction limit drops to Rs 30,000 per year.
+
+2. Let-Out / Rented Property:
+   - For rented or deemed let-out property, the entire interest paid during the year can be claimed as a deduction without an upper monetary limit.
+   - However, loss from house property that can be set off against other heads of income (like salary) is restricted to Rs 2,00,000 per assessment year. Any remaining loss can be carried forward for up to 8 assessment years.
+
+3. Pre-Construction Interest:
+   - Interest paid during the pre-construction period (period prior to the financial year in which construction is completed) can be claimed in 5 equal annual installments starting from the year construction is completed.
+
+Principal Repayment under Section 80C:
+- Principal repayment of a home loan is eligible for deduction under Section 80C up to the overall cap of Rs 1,50,000 per year.
+- Stamp duty, registration fees, and transfer costs paid for acquiring a residential house are also deductible under Section 80C in the year of payment.
+
+Section 80EEA Additional Deduction:
+- An additional deduction of up to Rs 1,50,000 is available under Section 80EEA for interest on home loan taken by first-time home buyers for affordable housing (stamp duty value <= Rs 45 lakh), provided the loan was sanctioned between April 1, 2019, and March 31, 2022.

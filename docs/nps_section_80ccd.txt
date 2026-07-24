@@ -1,0 +1,21 @@
+National Pension System (NPS) Tax Deductions - Section 80CCD
+
+The National Pension System (NPS) offers tax deduction benefits under three distinct subsections of Section 80CCD:
+
+1. Section 80CCD(1) - Employee Contribution:
+   - Individual contribution to NPS by an employee or self-employed individual.
+   - For salaried individuals, deduction limit is up to 10% of Salary (Basic + DA).
+   - For self-employed individuals, deduction limit is up to 20% of Gross Total Income.
+   - The total deduction under Section 80CCD(1), combined with Section 80C and Section 80CCC, is subject to the overall cap of Rs 1,50,000 under Section 80CCE.
+
+2. Section 80CCD(1B) - Additional Self Contribution:
+   - Provides an exclusive additional tax deduction of up to Rs 50,000 for contributions made to Tier-I NPS accounts.
+   - This Rs 50,000 limit is over and above the Rs 1,50,000 limit specified under Section 80C/80CCD(1).
+   - Total self-contribution tax benefit on NPS reaches up to Rs 2,00,000 (Rs 1.5 lakh under 80C + Rs 50,000 under 80CCD(1B)).
+
+3. Section 80CCD(2) - Employer Contribution:
+   - Tax deduction on employer's contribution to an employee's Tier-I NPS account.
+   - For Central and State Government employees, employer contribution up to 14% of Salary (Basic + DA) is tax-exempt.
+   - For private sector employees, employer contribution up to 10% of Salary (Basic + DA) is tax-exempt under the old regime, and up to 14% under the new regime (post-Budget 2024).
+   - Section 80CCD(2) benefit is available under BOTH old and new tax regimes.
+   - Note: Aggregate employer contribution towards Provident Fund (EPF), NPS, and Superannuation fund exceeding Rs 7,50,000 per financial year becomes taxable in the hands of the employee.

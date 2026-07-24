@@ -1,0 +1,19 @@
+Capital Gains Tax Overview in India
+
+Capital gains are classified into Short-Term Capital Gains (STCG) and Long-Term Capital Gains (LTCG) based on the holding period of the asset.
+
+Holding Periods for Capital Assets:
+1. Equity shares, equity-oriented mutual funds, and listed securities: Held for more than 12 months = Long-Term; 12 months or less = Short-Term.
+2. Unlisted shares and immovable property (land or building): Held for more than 24 months = Long-Term; 24 months or less = Short-Term.
+3. Debt mutual funds and other assets: Held for more than 36 months = Long-Term; 36 months or less = Short-Term.
+
+Taxation Rates:
+1. Listed Equity STCG (Section 111A): Taxed at a flat rate of 15% (plus applicable surcharge and cess) if Securities Transaction Tax (STT) is paid.
+2. Listed Equity LTCG (Section 112A): Taxed at 10% on gains exceeding Rs 1,00,000 in a financial year without indexation benefits, provided STT is paid on acquisition and transfer.
+3. Debt Funds & Debt Mutual Funds (Post-April 2023 Amendment): Capital gains from specified mutual funds where equity investment is <= 35% are treated as short-term capital gains regardless of holding period and taxed at applicable income tax slab rates.
+4. Real Estate / Immovable Property LTCG (Section 112): Taxed at 20% with indexation benefit.
+
+Exemptions & Reinvestment Rules:
+1. Section 54: Exemption on LTCG from sale of a residential house if invested in purchasing another residential house in India within 1 year before or 2 years after the date of transfer, or constructing a house within 3 years.
+2. Section 54F: Exemption on LTCG from sale of any long-term asset other than a residential house if the net consideration is invested in buying or constructing a residential house, provided the taxpayer does not own more than one residential house on the date of transfer.
+3. Section 54EC: Exemption up to Rs 50 lakh by investing long-term capital gains in specified bonds issued by NHAI or REC within 6 months of transfer.

@@ -308,7 +308,11 @@ nav = st.sidebar.radio("Navigation Pages", [
     "Cost Analytics",
     "Latency Analytics",
     "Prompt Playground",
-    "Dataset Explorer"
+    "Dataset Explorer",
+    "── New ──────────────",
+    "Run Comparison",
+    "Trace Replay",
+    "Adversarial Explorer",
 ])
 
 st.sidebar.divider()
@@ -774,3 +778,263 @@ elif nav == "Dataset Explorer":
         st.dataframe(df_filtered, use_container_width=True)
     else:
         st.error(f"Dataset file not found at {ds_path}")
+
+
+# ═══════════════════════════════════════════════════════════════
+# Phase 8 — New Pages
+# ═══════════════════════════════════════════════════════════════
+
+elif nav == "Run Comparison":
+    st.title("⚖️ Run Comparison")
+    st.caption("Compare any two evaluation runs side-by-side — useful for prompt A/B, model swaps, or retrieval strategy changes.")
+    st.divider()
+
+    if len(runs) < 2:
+        st.info("Need at least 2 completed runs to compare. Run `python evaluate.py` at least twice.")
+    else:
+        run_labels = [f"{r.get('timestamp','?')} | {r.get('mode','?')} | {r.get('provider','?')}" for r in runs]
+        col1, col2 = st.columns(2)
+        with col1:
+            idx_a = st.selectbox("Run A (baseline)", range(len(run_labels)), format_func=lambda i: run_labels[i], index=min(1, len(runs)-1))
+        with col2:
+            idx_b = st.selectbox("Run B (candidate)", range(len(run_labels)), format_func=lambda i: run_labels[i], index=0)
+
+        run_a = runs[idx_a]
+        run_b = runs[idx_b]
+
+        # ── Summary metrics table ──────────────────────────────────────
+        st.subheader("📊 Metric Comparison")
+        metrics_to_compare = [
+            ("Pass Rate (%)",         "pass_rate",              False),
+            ("Hit Rate (%)",          "avg_retrieval_hit_rate", True,  100),
+            ("MRR",                   "avg_retrieval_mrr",      False),
+            ("nDCG@K",               "avg_ndcg_at_k",          False),
+            ("MAP",                   "avg_map_score",          False),
+            ("Coverage",              "avg_coverage",           False),
+            ("Faithfulness",          "avg_faithfulness",       False),
+            ("Hallucination Rate",    "hallucination_rate_avg", False),
+            ("Token F1",              "avg_token_f1",           False),
+            ("p95 Latency (s)",       "p95_latency_sec",        False),
+            ("Avg Cost/Query ($)",    "avg_cost_usd",           False),
+        ]
+
+        rows = []
+        for entry in metrics_to_compare:
+            label = entry[0]; key = entry[1]
+            scale = entry[3] if len(entry) > 3 else 1
+            va = run_a.get(key, 0.0)
+            vb = run_b.get(key, 0.0)
+            if isinstance(va, (int, float)): va = round(va * scale, 3)
+            if isinstance(vb, (int, float)): vb = round(vb * scale, 3)
+            if isinstance(va, (int, float)) and isinstance(vb, (int, float)):
+                delta = round(vb - va, 3)
+                sign = "+" if delta >= 0 else ""
+                delta_str = f"{sign}{delta}"
+            else:
+                delta_str = "—"
+            rows.append({"Metric": label, "Run A": va, "Run B": vb, "Delta (B-A)": delta_str})
+
+        df_comp = pd.DataFrame(rows)
+        st.dataframe(df_comp, use_container_width=True, hide_index=True)
+
+        # ── Per-category pass rate delta ───────────────────────────────
+        st.subheader("📂 Per-Category Pass Rate")
+        results_a = {r["unique_id"]: r for r in run_a.get("results", [])}
+        results_b = {r["unique_id"]: r for r in run_b.get("results", [])}
+        shared = set(results_a.keys()) & set(results_b.keys())
+
+        cat_data = {}
+        for qid in shared:
+            cat = results_a[qid].get("category", "general")
+            cat_data.setdefault(cat, {"a_pass": 0, "b_pass": 0, "total": 0})
+            cat_data[cat]["total"] += 1
+            if results_a[qid].get("status") == "PASS": cat_data[cat]["a_pass"] += 1
+            if results_b[qid].get("status") == "PASS": cat_data[cat]["b_pass"] += 1
+
+        if cat_data:
+            cat_rows = []
+            for cat, d in sorted(cat_data.items()):
+                pa = round(d["a_pass"] / d["total"] * 100, 1) if d["total"] else 0
+                pb = round(d["b_pass"] / d["total"] * 100, 1) if d["total"] else 0
+                cat_rows.append({"Category": cat, "Run A (%)": pa, "Run B (%)": pb, "Delta": round(pb - pa, 1)})
+            df_cat = pd.DataFrame(cat_rows)
+            fig_cat = px.bar(df_cat, x="Category", y=["Run A (%)", "Run B (%)"],
+                             barmode="group", title="Pass Rate by Category",
+                             color_discrete_sequence=["#6366f1", "#22d3ee"])
+            st.plotly_chart(fig_cat, use_container_width=True)
+
+        # ── Status changes ──────────────────────────────────────────────
+        st.subheader("🔄 Status Changes")
+        regressions, improvements = [], []
+        for qid in shared:
+            sa = results_a[qid].get("status"); sb = results_b[qid].get("status")
+            if sa == "PASS" and sb == "FAIL":
+                regressions.append({"ID": qid, "Question": results_a[qid].get("question", "")[:80], "Category": results_a[qid].get("category", "")})
+            elif sa == "FAIL" and sb == "PASS":
+                improvements.append({"ID": qid, "Question": results_a[qid].get("question", "")[:80], "Category": results_a[qid].get("category", "")})
+
+        c1, c2 = st.columns(2)
+        with c1:
+            st.markdown(f"**❌ Regressions (PASS→FAIL): {len(regressions)}**")
+            if regressions: st.dataframe(pd.DataFrame(regressions), use_container_width=True, hide_index=True)
+        with c2:
+            st.markdown(f"**✅ Improvements (FAIL→PASS): {len(improvements)}**")
+            if improvements: st.dataframe(pd.DataFrame(improvements), use_container_width=True, hide_index=True)
+
+
+elif nav == "Trace Replay":
+    st.title("🔬 Trace Replay")
+    st.caption("Inspect the full per-phase execution trace for any query in any run.")
+    st.divider()
+
+    try:
+        from core.telemetry import load_trace, list_trace_runs
+        trace_runs = list_trace_runs()
+    except Exception:
+        trace_runs = []
+
+    if not runs:
+        st.info("No evaluation runs found. Run `python evaluate.py` first.")
+    else:
+        # Query selector
+        run_labels = [f"{r.get('timestamp','?')} | {r.get('mode','?')}" for r in runs]
+        selected_run_idx = st.selectbox("Select Run", range(len(run_labels)), format_func=lambda i: run_labels[i])
+        selected_run = runs[selected_run_idx]
+        all_results = selected_run.get("results", [])
+
+        if all_results:
+            q_labels = [f"{r['unique_id']} | {r['status']} | {r.get('question','')[:60]}" for r in all_results]
+            selected_q_idx = st.selectbox("Select Query", range(len(q_labels)), format_func=lambda i: q_labels[i])
+            result = all_results[selected_q_idx]
+
+            st.subheader(f"Query: {result['unique_id']}")
+            c1, c2, c3 = st.columns(3)
+            c1.metric("Status", result.get("status", "?"))
+            c2.metric("Semantic Sim", result.get("semantic_similarity", "?"))
+            c3.metric("Latency", f"{result.get('latency_sec','?')}s")
+
+            with st.expander("❓ Question & Ground Truth", expanded=True):
+                st.markdown(f"**Question:** {result.get('question','')}")
+                st.markdown(f"**Ground Truth:** {result.get('ground_truth','')}")
+                st.markdown(f"**Generated Answer:** {result.get('answer','')}")
+
+            with st.expander("📄 Retrieved Chunks", expanded=False):
+                chunks = result.get("retrieved_chunks", [])
+                sims   = result.get("retrieved_similarities", [])
+                srcs   = result.get("retrieved_sources", [])
+                for i, (chunk, sim, src) in enumerate(zip(chunks, sims, srcs)):
+                    st.markdown(f"**Chunk {i+1}** — `{src}` | similarity: `{sim}`")
+                    st.code(chunk[:400], language="text")
+
+            with st.expander("⚖️ Judge Scores", expanded=False):
+                judge_cols = ["correctness", "faithfulness", "completeness", "hallucination_rate", "judge_confidence", "token_f1"]
+                judge_data = {k: result.get(k, "N/A") for k in judge_cols}
+                st.json(judge_data)
+                if result.get("judge_reasoning"):
+                    st.markdown(f"**Reasoning:** {result['judge_reasoning']}")
+                if result.get("judge_disagreement"):
+                    st.warning("⚠️ Ensemble judge disagreement detected on this query.")
+
+            with st.expander("🔎 Attribution & Diagnosis", expanded=False):
+                st.markdown(f"**Failure Category:** `{result.get('failure_category', 'N/A')}`")
+                st.markdown(f"**Attribution Reason:** {result.get('attribution_reason', '')}")
+                diag = result.get("retrieval_diagnosis", {})
+                if diag:
+                    st.json(diag)
+
+            # Telemetry waterfall
+            ts = selected_run.get("timestamp", "")
+            if ts and trace_runs and ts in trace_runs:
+                with st.expander("⏱️ Latency Waterfall (Telemetry)", expanded=False):
+                    spans = [s for s in load_trace(ts) if s.get("query_id") == result["unique_id"]]
+                    if spans:
+                        df_spans = pd.DataFrame([{"Phase": s["phase"], "Duration (ms)": s["duration_ms"]} for s in spans])
+                        fig_wf = px.bar(df_spans, x="Duration (ms)", y="Phase", orientation="h",
+                                        title="Phase Latency Breakdown", color="Phase",
+                                        color_discrete_sequence=px.colors.qualitative.Pastel)
+                        st.plotly_chart(fig_wf, use_container_width=True)
+                    else:
+                        st.info("No telemetry spans found for this query.")
+            else:
+                st.info("Telemetry traces available after next evaluation run.")
+        else:
+            st.info("No results found in this run.")
+
+
+elif nav == "Adversarial Explorer":
+    st.title("🛡️ Adversarial Explorer")
+    st.caption("Analyse robustness test results — prompt injection, hallucination traps, negation, missing context, and more.")
+    st.divider()
+
+    # Find adversarial runs
+    adv_runs = [r for r in runs if r.get("mode") == "adversarial" or
+                any(res.get("adversarial_category") for res in r.get("results", []))]
+
+    if not adv_runs:
+        st.info("""
+        No adversarial runs found yet. Run the adversarial test suite:
+        ```bash
+        python evaluate.py --adversarial --no-judge
+        ```
+        """)
+    else:
+        run_labels = [f"{r.get('timestamp','?')} | {r.get('mode','?')}" for r in adv_runs]
+        sel = st.selectbox("Select Adversarial Run", range(len(run_labels)), format_func=lambda i: run_labels[i])
+        adv_run = adv_runs[sel]
+        adv_results = adv_run.get("results", [])
+
+        # Summary metrics
+        total_adv = len(adv_results)
+        passed_adv = sum(1 for r in adv_results if r.get("status") == "PASS")
+        fooled = total_adv - passed_adv  # model was 'fooled' = failed an adversarial check
+
+        m1, m2, m3 = st.columns(3)
+        m1.metric("Total Adversarial Queries", total_adv)
+        m2.metric("Passed (Robust)", passed_adv)
+        m3.metric("Failed (Vulnerable)", fooled, delta=f"-{fooled}" if fooled > 0 else "0", delta_color="inverse")
+
+        # Per-category breakdown
+        st.subheader("Vulnerability by Adversarial Category")
+        cat_counts: dict = {}
+        for r in adv_results:
+            acat = r.get("adversarial_category", r.get("category", "unknown"))
+            cat_counts.setdefault(acat, {"total": 0, "failed": 0})
+            cat_counts[acat]["total"] += 1
+            if r.get("status") == "FAIL":
+                cat_counts[acat]["failed"] += 1
+
+        if cat_counts:
+            cat_rows = []
+            for cat, d in sorted(cat_counts.items()):
+                vuln_rate = round(d["failed"] / d["total"] * 100, 1) if d["total"] else 0
+                cat_rows.append({"Category": cat, "Total": d["total"], "Failed": d["failed"], "Vulnerability Rate (%)": vuln_rate})
+            df_adv_cat = pd.DataFrame(cat_rows)
+            fig_adv = px.bar(df_adv_cat, x="Category", y="Vulnerability Rate (%)",
+                             title="Vulnerability Rate by Adversarial Category",
+                             color="Vulnerability Rate (%)",
+                             color_continuous_scale=["#22d3ee", "#f87171"])
+            st.plotly_chart(fig_adv, use_container_width=True)
+            st.dataframe(df_adv_cat, use_container_width=True, hide_index=True)
+
+        # Detailed results table
+        st.subheader("All Adversarial Query Results")
+        adv_table = []
+        for r in adv_results:
+            adv_table.append({
+                "ID":          r.get("unique_id", ""),
+                "Status":      r.get("status", ""),
+                "Adv. Type":   r.get("adversarial_category", r.get("category", "")),
+                "Question":    r.get("question", "")[:70],
+                "Answer":      r.get("answer", "")[:70],
+                "Sem. Sim":    r.get("semantic_similarity", 0),
+                "Failure Cat": r.get("failure_category", ""),
+            })
+        df_adv_table = pd.DataFrame(adv_table)
+        fail_filter = st.checkbox("Show only FAILED (vulnerable) queries", value=False)
+        if fail_filter:
+            df_adv_table = df_adv_table[df_adv_table["Status"] == "FAIL"]
+        st.dataframe(df_adv_table, use_container_width=True, hide_index=True)
+
+elif nav == "── New ──────────────":
+    st.info("Select one of the new pages above.")
+

@@ -59,14 +59,16 @@ def generate_answer(
     context = "\n\n".join(context_chunks)
 
     if system_prompt is None:
+        import config as _cfg
         system_prompt = (
-            "You are an expert Indian income tax assistant. Answer the question using ONLY the provided context.\n"
-            "1. Multi-Step Deduction: Combine facts, limits, and eligibility criteria from different parts of the context "
-            "(e.g., Section 80C limits, Section 80D medical insurance, or age-based slab rules) to calculate totals or deduce complete answers.\n"
-            "2. Adversarial & False Premises: If a question assumes a false tax rule or asks about a provision not supported by the context, "
-            "explicitly state the facts according to the context or say \"I don't have information about that.\"\n"
-            "3. Refusal Rule: Do not refuse to answer if the conclusion can be directly deduced from the context. "
-            "However, if the answer cannot be deduced or found in the context, say \"I don't have information about that.\""
+            f"You are an expert assistant for a {_cfg.DOMAIN_DESCRIPTION}. "
+            "Answer the question using ONLY the provided context.\n"
+            "1. Multi-Step Reasoning: Combine facts and criteria from different parts of the context "
+            "to calculate totals, compare options, or deduce complete answers.\n"
+            "2. False Premises: If the question assumes something not supported by the context, "
+            "explicitly correct it using the context or say 'I don't have information about that.'\n"
+            "3. Refusal Rule: Do not refuse if the conclusion can be deduced from the context. "
+            "If the answer cannot be found or deduced, say 'I don't have information about that.'"
         )
 
     prompt = f"""{system_prompt}

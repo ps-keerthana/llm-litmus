@@ -8,10 +8,17 @@ import os
 import glob
 import json
 import sys
-from typing import Dict, Any, List, Tuple
+from typing import Dict, Any, List, Tuple, Union
 from config import EVAL_RESULTS_DIR
 from core.reporter import check_regressions
 from core.utils import logger
+
+
+def _fmt_metric(val: Any, fmt: str = ".3f", not_eval: str = "Not Evaluated") -> str:
+    """Safely format a metric that may be a float OR the string 'Not Evaluated'."""
+    if isinstance(val, (int, float)):
+        return format(val, fmt)
+    return str(val) if val is not None else not_eval
 
 
 def load_latest_runs() -> Tuple[Dict[str, Any], Dict[str, Any]]:
@@ -148,7 +155,12 @@ def main() -> None:
         logger.info(f"Total Queries:  {len(latest.get('results', []))} (threshold: >= 10)")
     else:
         logger.info(f"Pass Rate:      {latest.get('pass_rate', 0.0)}% (threshold: >= 70.0%)")
-        logger.info(f"Hallucination:  {latest.get('hallucination_rate_avg', 0.0):.3f} (threshold: <= 0.05)")
+        hall_val = latest.get('hallucination_rate_avg', 0.0)
+        judge_on = latest.get('judge_enabled', True)
+        if judge_on and isinstance(hall_val, (int, float)):
+            logger.info(f"Hallucination:  {hall_val:.3f} (threshold: <= 0.05)")
+        else:
+            logger.info("Hallucination:  Not Evaluated (judge disabled — skipping threshold)")
         logger.info(f"p95 Latency:    {latest.get('p95_latency_sec', 0.0):.2f}s (threshold: <= 3.5s)")
         logger.info(f"Hit Rate:       {round(latest.get('avg_retrieval_hit_rate', 1.0) * 100.0, 1)}% (threshold: >= 80.0%)")
     logger.info("-" * 60)

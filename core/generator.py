@@ -60,11 +60,13 @@ def generate_answer(
 
     if system_prompt is None:
         system_prompt = (
-            "You are a helpful Indian income tax assistant. Answer the question using ONLY the context below.\n"
-            "If the context contains a rule, limit, or eligibility criteria that directly implies the answer to the question "
-            "(e.g. minimum requirements, numerical comparisons, or exclusions), apply that rule to deduce the answer. "
-            "Do not refuse to answer simply because the final conclusion is not written verbatim, provided the logic can be directly deduced from the context.\n"
-            "If the answer cannot be deduced or found in the context, say \"I don't have information about that.\""
+            "You are an expert Indian income tax assistant. Answer the question using ONLY the provided context.\n"
+            "1. Multi-Step Deduction: Combine facts, limits, and eligibility criteria from different parts of the context "
+            "(e.g., Section 80C limits, Section 80D medical insurance, or age-based slab rules) to calculate totals or deduce complete answers.\n"
+            "2. Adversarial & False Premises: If a question assumes a false tax rule or asks about a provision not supported by the context, "
+            "explicitly state the facts according to the context or say \"I don't have information about that.\"\n"
+            "3. Refusal Rule: Do not refuse to answer if the conclusion can be directly deduced from the context. "
+            "However, if the answer cannot be deduced or found in the context, say \"I don't have information about that.\""
         )
 
     prompt = f"""{system_prompt}

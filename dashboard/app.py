@@ -137,6 +137,21 @@ def _api_get(path: str, timeout: int = 4):
         return None
 
 
+def _api_post(path: str, payload: dict, timeout: int = 5):
+    """POST request helper to call FastAPI backend."""
+    try:
+        req = _urllib_req.Request(
+            f"{API_BASE_URL}{path}",
+            data=json.dumps(payload).encode("utf-8"),
+            headers={"Content-Type": "application/json"},
+            method="POST",
+        )
+        with _urllib_req.urlopen(req, timeout=timeout) as r:
+            return json.loads(r.read())
+    except Exception as exc:
+        return {"error": str(exc)}
+
+
 def _api_connected() -> bool:
     """Lightweight probe to check if the API is reachable."""
     return _api_get("/health") is not None
@@ -244,6 +259,23 @@ else:
         "<span style='color:#f87171;font-size:12px;'>● API offline — reading from files</span>",
         unsafe_allow_html=True,
     )
+
+st.sidebar.divider()
+st.sidebar.markdown("### 🚀 Trigger Evaluation")
+if _connected:
+    eval_mode = st.sidebar.selectbox("Mode", ["smoke", "full"], index=0)
+    eval_provider = st.sidebar.selectbox("Provider", ["ollama", "groq", "openai", "anthropic"], index=0)
+    no_judge_option = st.sidebar.checkbox("Skip LLM Judge (--no-judge)", value=True)
+    if st.sidebar.button("Run Evaluation", type="primary", use_container_width=True):
+        res = _api_post("/runs/enqueue", {"mode": eval_mode, "no_judge": no_judge_option, "provider": eval_provider})
+        if res and "run_id" in res:
+            st.sidebar.success(f"Enqueued `{res['run_id']}`!")
+            time.sleep(1)
+            st.rerun()
+        else:
+            st.sidebar.error(f"Failed to enqueue: {res.get('error') if res else 'Unknown error'}")
+else:
+    st.sidebar.info("Start API server (`python api/app.py`) to trigger live evaluation runs from UI.")
 
 if not runs:
     st.warning("No evaluation runs found. Run `python evaluate.py` first.")

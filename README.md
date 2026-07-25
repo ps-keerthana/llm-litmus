@@ -1,6 +1,6 @@
 <div align="center">
 
-# ⚗ LLM-Litmus
+# LLM-Litmus
 
 **Continuous quality gating for production RAG pipelines.**
 

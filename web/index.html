@@ -555,7 +555,12 @@
   <nav aria-label="Main navigation">
     <div class="container nav-inner">
       <a class="logo-wrap" href="#" aria-label="LLM-Litmus — home">
-        <div class="logo-icon" aria-hidden="true">⚗</div>
+        <div class="logo-icon" aria-hidden="true">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+            <path d="m9 12 2 2 4-4"/>
+          </svg>
+        </div>
         <span class="logo-text">LLM-Litmus</span>
         <span class="logo-badge">v2.0.0</span>
       </a>
@@ -605,8 +610,8 @@
 
     <!-- LIVE ACTIVITY TICKER -->
     <div class="live-activity-bar">
-      <span class="activity-tag">● Live Activity</span>
-      <span class="activity-text" id="liveActivityText">✓ Legal NDA confidentiality penalty checked</span>
+      <span class="activity-tag">LIVE ACTIVITY</span>
+      <span class="activity-text" id="liveActivityText">Legal NDA confidentiality penalty checked</span>
       <span class="activity-time" id="liveActivityTime">12 sec ago</span>
     </div>
 
@@ -792,19 +797,19 @@
         <!-- Visual Trio Metrics Metaphors -->
         <div class="trio-metrics">
           <div class="trio-card">
-            <div class="trio-title">🎯 Search Accuracy</div>
+            <div class="trio-title"><i data-lucide="target" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"></i> Search Accuracy</div>
             <div class="trio-val" id="trioSearch">97.5%</div>
             <div class="trio-sub">Target document chunk found</div>
             <div class="metric-tip">Did vector search retrieve the correct document chunk?</div>
           </div>
           <div class="trio-card">
-            <div class="trio-title">📝 Wording Match</div>
+            <div class="trio-title"><i data-lucide="file-check" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"></i> Wording Match</div>
             <div class="trio-val" id="trioF1">0.885</div>
             <div class="trio-sub">Token overlap with reference</div>
             <div class="metric-tip">How closely does the answer wording match ground truth?</div>
           </div>
           <div class="trio-card">
-            <div class="trio-title">✅ Knowledge Faithfulness</div>
+            <div class="trio-title"><i data-lucide="shield-check" style="width:12px;height:12px;vertical-align:-1px;margin-right:4px;"></i> Knowledge Faithfulness</div>
             <div class="trio-val" id="trioFaith">100%</div>
             <div class="trio-sub">Zero ungrounded claims</div>
             <div class="metric-tip">Did the model stay strictly inside the retrieved context?</div>
@@ -1314,11 +1319,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
   // Dynamic Ticker
   const activities = [
-    { text: "✓ Legal NDA confidentiality penalty checked", time: "12 sec ago" },
-    { text: "✓ Clinical guidelines asthma therapy evaluated", time: "28 sec ago" },
-    { text: "✓ HR parental leave policy benchmarked", time: "45 sec ago" },
-    { text: "✓ LTCG capital gains tax rules verified", time: "1 min ago" },
-    { text: "🛡️ Prompt injection trap blocked by Numeric Gate", time: "2 min ago" }
+    { text: "Legal NDA confidentiality penalty checked", time: "12 sec ago" },
+    { text: "Clinical guidelines asthma therapy evaluated", time: "28 sec ago" },
+    { text: "HR parental leave policy benchmarked", time: "45 sec ago" },
+    { text: "LTCG capital gains tax rules verified", time: "1 min ago" },
+    { text: "Prompt injection trap blocked by Numeric Gate", time: "2 min ago" }
   ];
   let actIdx = 0;
   setInterval(() => {

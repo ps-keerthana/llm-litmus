@@ -56,7 +56,7 @@ def _reset_bucket() -> None:
 
 class TestSchedulerColdStart(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_first_acquire_creates_row(self):
@@ -81,7 +81,7 @@ class TestSchedulerColdStart(unittest.TestCase):
 
 class TestSchedulerDebit(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_rpm_decremented(self):
@@ -117,14 +117,8 @@ class TestSchedulerDebit(unittest.TestCase):
 
     def test_bucket_never_negative(self):
         """Burst of acquires beyond capacity should floor bucket at 0, not go negative."""
-        # Exhaust TPM entirely with a single large request
         huge = _config_mod.SCHEDULER_MAX_TPM + 9999
-
-        with patch("time.sleep"):  # prevent actual sleeping in test
-            try:
-                scheduler.acquire(huge)
-            except Exception:
-                pass  # It may block; we just check the DB state
+        scheduler._debit(huge)
 
         conn = sqlite3.connect(_config_mod.DB_PATH)
         row = conn.execute(
@@ -139,7 +133,7 @@ class TestSchedulerDebit(unittest.TestCase):
 
 class TestSchedulerRefund(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_refund_increases_tpm(self):
@@ -208,7 +202,7 @@ class TestSchedulerRefund(unittest.TestCase):
 
 class TestSchedulerBucketRefill(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_refill_restores_capacity(self):
@@ -238,7 +232,7 @@ class TestSchedulerBucketRefill(unittest.TestCase):
 
 class TestSchedulerConcurrency(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_concurrent_acquires_do_not_corrupt_bucket(self):
@@ -279,7 +273,7 @@ class TestSchedulerConcurrency(unittest.TestCase):
 
 class TestSchedulerDrain(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_drain_sets_rem_to_zero(self):
@@ -300,7 +294,7 @@ class TestSchedulerDrain(unittest.TestCase):
 
 class TestSchedulerSpacing(unittest.TestCase):
     def setUp(self):
-        init_db()
+        init_db(_config_mod.DB_PATH)
         _reset_bucket()
 
     def test_spacing_forces_wait(self):

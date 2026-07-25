@@ -1,35 +1,52 @@
-# Virtual environment
+# ── Python runtime ────────────────────────────────────────────────────────────
 venv/
-
-# Environment variables (API keys)
-.env
-
-# Python cache
 __pycache__/
 *.pyc
 *.pyo
+*.pyd
+*.egg-info/
+dist/
+build/
+.eggs/
 
-# Individual eval run results (too large for git)
-# Only metrics_history.json is tracked
+# ── Environment & secrets ─────────────────────────────────────────────────────
+.env
+.env.*
+
+# ── Evaluation artefacts ──────────────────────────────────────────────────────
+# Individual run results (too large for git; only metrics_history.json is tracked)
 eval_results/
+eval_summary.md
 
-# IDE / editor
+# ── Evaluation caches ─────────────────────────────────────────────────────────
+.eval_cache.json
+
+# ── Database files ────────────────────────────────────────────────────────────
+eval_platform.db
+# Persistent ChromaDB index (re-built from docs/ on first run)
+db/chroma/
+
+# ── Test / coverage artefacts ─────────────────────────────────────────────────
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+
+# ── IDE / editor ──────────────────────────────────────────────────────────────
 .vscode/
 .idea/
 *.swp
+*.swo
+*~
 
-# Agent configs
+# ── Agent configs ─────────────────────────────────────────────────────────────
 .agents/
+.gemini/
 
-# OS files
+# ── OS files ─────────────────────────────────────────────────────────────────
 .DS_Store
 Thumbs.db
+desktop.ini
 
-# Evaluation cache
-.eval_cache.json
-
-# Local reports
-eval_summary.md
-
-# Database
-eval_platform.db
+# ── Logs ─────────────────────────────────────────────────────────────────────
+*.log

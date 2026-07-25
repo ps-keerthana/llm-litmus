@@ -70,10 +70,11 @@ def compute_token_f1(prediction: str, ground_truth: str) -> float:
 
 # Matches numbers like: 1.5, 1,50,000, 50000, ₹1.5, 2%, 80C (section numbers excluded)
 _NUMBER_RE = re.compile(
-    r"(?<![a-zA-Z])"            # not preceded by a letter (excludes 80C, 194J etc.)
+    r"(?<![a-zA-Z])"            # not preceded by a letter
     r"(?:₹\s*)?"                # optional rupee sign
     r"\d[\d,\.]*"               # the number itself
     r"(?:\s*(?:lakh|crore|%))?" # optional unit
+    r"(?![a-zA-Z])"             # not followed by a letter (excludes 80C, 194J, 24b)
 )
 
 

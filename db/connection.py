@@ -28,11 +28,14 @@ def db_transaction() -> Generator[sqlite3.Connection, None, None]:
     finally:
         conn.close()
 
-def init_db() -> None:
+def init_db(db_path: str = None) -> None:
     """
     Initializes the database schema if the tables do not already exist.
     """
-    with db_transaction() as conn:
+    target_path = db_path or DB_PATH
+    conn = sqlite3.connect(target_path)
+    conn.execute("PRAGMA foreign_keys = ON;")
+    try:
         # Cache Table
         conn.execute("""
             CREATE TABLE IF NOT EXISTS eval_cache (
@@ -149,3 +152,5 @@ def init_db() -> None:
             conn.execute("ALTER TABLE rate_limit_buckets ADD COLUMN last_request_time REAL DEFAULT 0.0;")
         except sqlite3.OperationalError:
             pass  # Column already exists
+    finally:
+        conn.close()

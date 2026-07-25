@@ -6,6 +6,15 @@
   <title>LLM-Litmus — RAG Evaluation Platform</title>
   <meta name="description" content="Domain-agnostic automated evaluation and quality gating for LLM RAG pipelines. Multi-signal scoring, adversarial testing, A/B comparison, and structured telemetry." />
 
+  <!-- Open Graph / Social Sharing -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:title"       content="LLM-Litmus — RAG Evaluation Platform" />
+  <meta property="og:description" content="Continuous quality gating for production RAG pipelines. Multi-signal scoring, adversarial robustness, A/B comparison, and CI/CD integration." />
+  <meta property="og:url"         content="https://llm-litmus.vercel.app" />
+  <meta name="twitter:card"       content="summary_large_image" />
+  <meta name="twitter:title"      content="LLM-Litmus — RAG Evaluation Platform" />
+  <meta name="theme-color"        content="#FAFAF8" />
+
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet" />
@@ -65,6 +74,43 @@
       /* Transitions */
       --t-fast:   150ms cubic-bezier(0.4, 0, 0.2, 1);
       --t-normal: 220ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+
+    /* ── Reduced motion: disable all animations for accessibility ── */
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation-duration: 0.01ms !important;
+        transition-duration: 0.01ms !important;
+      }
+      html { scroll-behavior: auto; }
+    }
+
+    /* ── Page entrance fade-in ── */
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(12px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+    .fade-up {
+      animation: fadeUp 0.55s cubic-bezier(0.4, 0, 0.2, 1) both;
+    }
+    .fade-up-delay-1 { animation-delay: 0.10s; }
+    .fade-up-delay-2 { animation-delay: 0.20s; }
+    .fade-up-delay-3 { animation-delay: 0.30s; }
+
+    /* ── Focus-visible ring for keyboard navigation ── */
+    :focus-visible {
+      outline: 2px solid var(--blue);
+      outline-offset: 3px;
+      border-radius: var(--r-sm);
+    }
+    /* Remove default browser outline since we're providing our own */
+    :focus:not(:focus-visible) { outline: none; }
+
+    /* ── Screen-reader only utility ── */
+    .sr-only {
+      position: absolute; width: 1px; height: 1px;
+      padding: 0; margin: -1px; overflow: hidden;
+      clip: rect(0,0,0,0); white-space: nowrap; border: 0;
     }
 
     body {
@@ -501,28 +547,36 @@
 </head>
 <body>
 
-<!-- NAVIGATION -->
-<nav>
-  <div class="container nav-inner">
-    <a class="logo-wrap" href="#">
-      <div class="logo-icon">⚗</div>
-      <span class="logo-text">LLM-Litmus</span>
-      <span class="logo-badge">v2.0.0</span>
-    </a>
+<!-- SKIP LINK FOR KEYBOARD USERS -->
+<a href="#main-content" class="sr-only" style="position:absolute;top:6px;left:6px;z-index:999;padding:8px 16px;background:var(--blue);color:#fff;border-radius:8px;font-weight:600;font-size:13px;">Skip to main content</a>
 
-    <div class="nav-menu">
-      <a href="#features"     class="nav-link">Capabilities</a>
-      <a href="#console"      class="nav-link">Live Console</a>
-      <a href="#how-it-works" class="nav-link">Architecture</a>
-      <a href="#benchmarks"   class="nav-link">Benchmarks</a>
-      <a href="#analytics"    class="nav-link">Analytics</a>
-      <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" class="nav-cta">
-        <i data-lucide="github" style="width:13px;height:13px;stroke-width:2;"></i>
-        GitHub
+<!-- NAVIGATION -->
+<header>
+  <nav aria-label="Main navigation">
+    <div class="container nav-inner">
+      <a class="logo-wrap" href="#" aria-label="LLM-Litmus — home">
+        <div class="logo-icon" aria-hidden="true">⚗</div>
+        <span class="logo-text">LLM-Litmus</span>
+        <span class="logo-badge">v2.0.0</span>
       </a>
+
+      <div class="nav-menu">
+        <a href="#features"     class="nav-link">Capabilities</a>
+        <a href="#console"      class="nav-link">Live Console</a>
+        <a href="#how-it-works" class="nav-link">Architecture</a>
+        <a href="#benchmarks"   class="nav-link">Benchmarks</a>
+        <a href="#analytics"    class="nav-link">Analytics</a>
+        <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" rel="noopener noreferrer"
+           class="nav-cta" aria-label="View on GitHub (opens in new tab)">
+          <i data-lucide="github" style="width:13px;height:13px;stroke-width:2;" aria-hidden="true"></i>
+          GitHub
+        </a>
+      </div>
     </div>
-  </div>
-</nav>
+  </nav>
+</header>
+
+<main id="main-content">
 
 <!-- HERO SECTION -->
 <div class="container">
@@ -674,8 +728,11 @@
           <input class="smart-input" id="smartInput" type="text"
             value="What is the liquidated damages penalty for breach of confidentiality under Section 4?"
             placeholder="Ask about an HR policy..." />
-          <button class="btn-run-eval" id="btnRunEval" onclick="runPipelineTrace()">
-            <i data-lucide="play" style="width:14px;height:14px;"></i> Run Evaluation
+          <button class="btn-run-eval" id="btnRunEval"
+            onclick="runPipelineTrace()"
+            aria-label="Run evaluation on the current query"
+            aria-busy="false">
+            <i data-lucide="play" style="width:14px;height:14px;" aria-hidden="true"></i> Run Evaluation
           </button>
         </div>
 
@@ -718,7 +775,7 @@
       </div>
 
       <!-- Console Body Display -->
-      <div class="console-body">
+      <div class="console-body" role="region" aria-live="polite" aria-label="Evaluation results">
         <!-- Verdict Banner -->
         <div class="verdict-banner" id="verdictBanner">
           <div>
@@ -908,18 +965,25 @@
   </div>
 </div>
 
+
+</main><!-- end #main-content -->
+
 <!-- FOOTER -->
-<div class="container">
-  <div class="footer-inner">
-    <span class="footer-left">Built by @ps-keerthana · LLM-Litmus v2.0.0</span>
-    <div class="footer-right">
-      <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank">GitHub</a>
-      <a href="#console">Live Console</a>
-      <a href="#how-it-works">Architecture</a>
-      <a href="#features">Capabilities</a>
+<footer aria-label="Site footer">
+  <div class="container">
+    <div class="footer-inner">
+      <span class="footer-left">Built by <a href="https://github.com/ps-keerthana" target="_blank" rel="noopener noreferrer" style="color:inherit;text-decoration:none;">@ps-keerthana</a> &middot; LLM-Litmus v2.0.0</span>
+      <nav aria-label="Footer navigation">
+        <div class="footer-right">
+          <a href="https://github.com/ps-keerthana/llm-litmus" target="_blank" rel="noopener noreferrer" aria-label="View on GitHub (opens in new tab)">GitHub</a>
+          <a href="#console">Live Console</a>
+          <a href="#how-it-works">Architecture</a>
+          <a href="#features">Capabilities</a>
+        </div>
+      </nav>
     </div>
   </div>
-</div>
+</footer>
 
 <script>
 /* ─── TRACES POOL & STATE ────────────────────────── */
@@ -1056,8 +1120,14 @@ let placeholderIndex = 0;
 function renderFeedBar() {
   const bar = document.getElementById('feedBar');
   if (!bar) return;
+  // Each chip is a button-like element — give it role=button + tabindex for keyboard navigation
   bar.innerHTML = TRACE_DATA.map((item, idx) => `
-    <div class="feed-chip ${idx === activeIndex ? 'active' : ''}" onclick="selectFeedItem(${idx})">
+    <div class="feed-chip ${idx === activeIndex ? 'active' : ''}"
+      role="button"
+      tabindex="0"
+      aria-pressed="${idx === activeIndex}"
+      onclick="selectFeedItem(${idx})"
+      onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();selectFeedItem(${idx});}">
       <span class="feed-tag ${item.catTag}">${item.category}</span>
       <span>${item.q}</span>
     </div>
@@ -1074,7 +1144,9 @@ function selectFeedItem(idx) {
 function runPipelineTrace() {
   const btn = document.getElementById('btnRunEval');
   btn.disabled = true;
-  btn.textContent = 'Evaluating...';
+  btn.setAttribute('aria-busy', 'true');
+  btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;" aria-hidden="true"></i> Evaluating...';
+  lucide.createIcons();
 
   for (let i = 0; i < 5; i++) {
     const el = document.getElementById(`st-${i}`);
@@ -1086,7 +1158,7 @@ function runPipelineTrace() {
 
   const stageMessages = [
     "Searching ChromaDB...",
-    "Hit Rate 100% · nDCG 0.96",
+    "Hit Rate 100% \u00b7 nDCG 0.96",
     "Generating Answer...",
     "Multi-Signal Scoring...",
     "Verdict Finalized"
@@ -1113,7 +1185,8 @@ function runPipelineTrace() {
       clearInterval(interval);
       renderTraceResults(TRACE_DATA[activeIndex]);
       btn.disabled = false;
-      btn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px;"></i> Run Evaluation';
+      btn.setAttribute('aria-busy', 'false');
+      btn.innerHTML = '<i data-lucide="play" style="width:14px;height:14px;" aria-hidden="true"></i> Run Evaluation';
       lucide.createIcons();
     }
   }, 240);
@@ -1181,14 +1254,13 @@ function toggleABCompare() {
 
 function toggleDetailedInspection() {
   const el = document.getElementById('detailedInspector');
-  const txt = document.getElementById('inspectBtnText');
-  if (el.style.display === 'none') {
-    el.style.display = 'block';
-    txt.textContent = 'Hide Detailed Inspection';
-  } else {
-    el.style.display = 'none';
-    txt.textContent = 'Inspect Full Evaluation Details';
-  }
+  const btn = document.getElementById('inspectBtnText');
+  const isHidden = el.style.display === 'none';
+  el.style.display = isHidden ? 'block' : 'none';
+  btn.textContent = isHidden ? 'Hide Detailed Inspection' : 'Inspect Full Evaluation Details';
+  // Update aria-pressed on parent button for screen readers
+  const toggleBtn = btn.closest('button');
+  if (toggleBtn) toggleBtn.setAttribute('aria-pressed', isHidden ? 'true' : 'false');
 }
 
 /* ─── BENCHMARK GRID & CATEGORIES ────────────────── */

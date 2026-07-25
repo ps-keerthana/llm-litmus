@@ -1,0 +1,13 @@
+[tool.pytest.ini_options]
+# Test discovery root
+testpaths = ["tests"]
+
+# Verbosity and output
+addopts = "-v --tb=short"
+
+# Suppress known third-party deprecation warnings
+filterwarnings = [
+    "ignore::DeprecationWarning:chromadb",
+    "ignore::DeprecationWarning:sentence_transformers",
+    "ignore::UserWarning:torch",
+]

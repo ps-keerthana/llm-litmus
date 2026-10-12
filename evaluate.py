@@ -50,6 +50,7 @@ def _load_dataset(path: str) -> List[Dict]:
 
 def run_evaluation(
     smoke: bool = False,
+    sample: Optional[int] = None,
     no_judge: bool = False,
     no_diag: bool = False,
     provider: Optional[str] = None,
@@ -86,7 +87,22 @@ def run_evaluation(
 
     questions = _load_dataset(effective_dataset)
 
-    if smoke and not adversarial:
+    if sample and not adversarial:
+        random.seed(42)
+        categories: Dict[str, list] = {}
+        for q in questions:
+            cat = q.get("category", "general")
+            categories.setdefault(cat, []).append(q)
+        per_cat = max(1, sample // max(1, len(categories)))
+        sample_subset = []
+        for cat, q_list in sorted(categories.items()):
+            sample_subset.extend(random.sample(q_list, min(len(q_list), per_cat)))
+        remaining = [q for q in questions if q not in sample_subset]
+        if len(sample_subset) < sample and remaining:
+            sample_subset.extend(random.sample(remaining, min(len(remaining), sample - len(sample_subset))))
+        questions = sample_subset[:sample]
+        logger.info("SAMPLE mode: %d queries (stratified sample, seed=42).", len(questions))
+    elif smoke and not adversarial:
         SMOKE_PER_CATEGORY = 2
         random.seed(42)
         categories: Dict[str, list] = {}
@@ -390,7 +406,7 @@ def run_evaluation(
         "total_questions":         len(questions),
         "passed":                  passed,
         "failed":                  failed,
-        "mode":                    "smoke" if smoke else ("adversarial" if adversarial else "full"),
+        "mode":                    "sample" if sample else ("smoke" if smoke else ("adversarial" if adversarial else "full")),
         "judge_enabled":           not no_judge,
         "diag_enabled":            not no_diag,
         "cached_queries_count":    cached_hits,
@@ -417,8 +433,12 @@ def run_evaluation(
     }
 
     # ── Save Results ──────────────────────────────────────────────────────
-    os.makedirs(EVAL_RESULTS_DIR, exist_ok=True)
-    run_path = os.path.join(EVAL_RESULTS_DIR, f"run_{timestamp}.json")
+    if active_provider_name in ("mock", "demo") or active_model_name in ("mock", "demo"):
+        out_dir = "demo"
+    else:
+        out_dir = EVAL_RESULTS_DIR
+    os.makedirs(out_dir, exist_ok=True)
+    run_path = os.path.join(out_dir, f"run_{timestamp}.json")
     with open(run_path, "w", encoding="utf-8") as f:
         json.dump({**summary_entry, "results": results}, f, indent=2)
 
@@ -449,6 +469,7 @@ if __name__ == "__main__":
         epilog="""
 Examples:
   python evaluate.py --smoke                         # quick CI smoke test
+  python evaluate.py --sample 30                     # stratified 30-query sample
   python evaluate.py --provider groq                 # full run with Groq
   python evaluate.py --adversarial                   # robustness test suite
   python evaluate.py --docs-folder ./legal_docs \\
@@ -458,6 +479,8 @@ Examples:
     )
     parser.add_argument("--smoke", action="store_true",
         help="Run a fast balanced subset (10 queries, 2/category, seed=42). Use for CI.")
+    parser.add_argument("--sample", type=int, default=None,
+        help="Run a balanced stratified sample of N queries (e.g. --sample 30).")
     parser.add_argument("--no-judge", action="store_true", dest="no_judge",
         help="Skip LLM-as-a-judge (zero extra API calls). Scoring via local signals only.")
     parser.add_argument("--no-diag", action="store_true", dest="no_diag",
@@ -476,6 +499,7 @@ Examples:
     try:
         run_evaluation(
             smoke=args.smoke,
+            sample=args.sample,
             no_judge=args.no_judge,
             no_diag=args.no_diag,
             provider=args.provider,

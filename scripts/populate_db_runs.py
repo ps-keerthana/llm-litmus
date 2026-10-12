@@ -43,7 +43,18 @@ def populate():
             print(f"Error reading {f}: {exc}")
             continue
             
-        # Build metadata dict
+        # Guard against mock/demo runs
+        first_answer = ""
+        if run_data.get("results"):
+            first_answer = str(run_data["results"][0].get("answer", ""))
+        if (
+            run_data.get("is_demo")
+            or run_data.get("is_mock")
+            or run_data.get("llm_model") in ("mock", "demo")
+            or first_answer.startswith("Mock ")
+        ):
+            print(f"Skipping mock/demo run {run_id}.")
+            continue
         meta_keys = [
             "timestamp", "git_commit_hash", "branch", "dataset_version",
             "prompt_version", "retriever_version", "embedding_model", "llm_model",

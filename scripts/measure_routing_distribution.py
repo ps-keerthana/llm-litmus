@@ -99,5 +99,14 @@ def analyze_routing(run_path: str):
 
 
 if __name__ == "__main__":
-    path = sys.argv[1] if len(sys.argv) > 1 else "eval_results/run_20260715_120000.json"
+    import glob
+    if len(sys.argv) > 1:
+        path = sys.argv[1]
+    else:
+        run_files = sorted(glob.glob(os.path.join("eval_results", "run_*.json")))
+        if not run_files:
+            print("No evaluation run files found in eval_results/.")
+            sys.exit(1)
+        path = run_files[-1]
+    print(f"Analyzing routing distribution for: {path}")
     analyze_routing(path)

@@ -19,21 +19,36 @@ from config import (
 def append_to_metrics_history(summary: Dict[str, Any]) -> None:
     """
     Appends the summary metric dictionary of the active run to metrics_history.json.
+    Guards against mock/demo runs by redirecting them to demo/demo_metrics_history.json.
     """
+    is_demo = (
+        summary.get("is_demo", False)
+        or summary.get("is_mock", False)
+        or summary.get("llm_model") in ("mock", "demo")
+        or summary.get("provider") in ("mock", "demo")
+    )
+
+    if is_demo:
+        os.makedirs("demo", exist_ok=True)
+        target_path = os.path.join("demo", "demo_metrics_history.json")
+        print(f"  [Reporter Guard] Detected mock/demo run; writing to {target_path} instead of {METRICS_HISTORY_PATH}")
+    else:
+        target_path = METRICS_HISTORY_PATH
+
     history = []
-    if os.path.exists(METRICS_HISTORY_PATH):
+    if os.path.exists(target_path):
         try:
-            with open(METRICS_HISTORY_PATH, "r") as f:
+            with open(target_path, "r") as f:
                 history = json.load(f)
         except (json.JSONDecodeError, IOError):
             history = []
 
     history.append(summary)
 
-    with open(METRICS_HISTORY_PATH, "w") as f:
+    with open(target_path, "w") as f:
         json.dump(history, f, indent=2)
 
-    print(f"  [Reporter] Appended entry to {METRICS_HISTORY_PATH} ({len(history)} total runs)")
+    print(f"  [Reporter] Appended entry to {target_path} ({len(history)} total runs)")
 
 
 def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[str]:

@@ -32,13 +32,16 @@ class TestRetrievalMetrics(unittest.TestCase):
     [doc_a.txt, doc_b.txt, doc_a.txt]. Chunk 0 and 2 are relevant.
     """
 
-    def _run_metrics(self, retrieved_sources, expected_source):
+    def _run_metrics(self, retrieved_sources, expected_source, similarities=None):
         from core.retrieval import evaluate_retrieval
-        similarities = [0.9, 0.7, 0.6][:len(retrieved_sources)]
+        if similarities is None:
+            similarities = [0.9, 0.7, 0.6][:len(retrieved_sources)]
         return evaluate_retrieval(
             retrieved_sources=retrieved_sources,
-            expected_source=expected_source,
-            similarities=similarities,
+            expected_sources_str=expected_source,
+            retrieved_similarities=similarities,
+            question="What is the deduction under section 80C?",
+            retrieved_chunks=["The deduction limit under Section 80C is ₹1.5 lakh."] * len(retrieved_sources),
             k=len(retrieved_sources),
         )
 
@@ -112,10 +115,11 @@ class TestRetrievalMetrics(unittest.TestCase):
         self.assertEqual(metrics["context_precision"], 1.0)
 
     def test_context_precision_none_relevant(self):
-        """No retrieved chunks from expected source → precision = 0.0."""
+        """No retrieved chunks from expected source and low similarities → precision = 0.0."""
         metrics = self._run_metrics(
             retrieved_sources=["doc_b.txt", "doc_b.txt"],
             expected_source="doc_a.txt",
+            similarities=[0.1, 0.1],
         )
         self.assertEqual(metrics["context_precision"], 0.0)
 
@@ -124,8 +128,10 @@ class TestRetrievalMetrics(unittest.TestCase):
         from core.retrieval import evaluate_retrieval
         metrics = evaluate_retrieval(
             retrieved_sources=["doc_a.txt"],
-            expected_source="",
-            similarities=[0.9],
+            expected_sources_str="",
+            retrieved_similarities=[0.9],
+            question="What is the deduction?",
+            retrieved_chunks=["Chunk text."],
             k=1,
         )
         self.assertIsInstance(metrics, dict)

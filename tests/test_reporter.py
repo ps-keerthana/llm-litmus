@@ -48,10 +48,13 @@ class TestAbsoluteThresholds(unittest.TestCase):
         self.assertTrue(any("Pass rate" in f for f in hard))
 
     def test_pass_rate_at_threshold_passes(self):
+        # Use a baseline also at 70.0 so the regression check doesn't fire.
+        # At exactly the threshold (not below it), the absolute gate should pass.
+        base = _base_run(pass_rate=70.0)
         latest = _latest_run(pass_rate=70.0)
-        failures = check_regressions(latest, _base_run())
+        failures = check_regressions(latest, base)
         hard = [f for f in failures if "SKIPPED" not in f]
-        self.assertFalse(any("Pass rate" in f for f in hard))
+        self.assertFalse(any("below absolute threshold" in f for f in hard))
 
     def test_hallucination_above_threshold_fails(self):
         latest = _latest_run(hallucination_rate_avg=0.06)

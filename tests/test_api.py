@@ -113,8 +113,8 @@ class TestAPIEnqueueAuth(unittest.TestCase):
             original = app_module._API_KEY_ENV
             app_module._API_KEY_ENV = None
             try:
-                with patch("api.app.enqueue_run", return_value="run-test-123"), \
-                     patch("api.app.process_queue"):
+                with patch("core.queue.enqueue_run", return_value="run-test-123"), \
+                     patch("core.queue.process_queue"):
                     from fastapi.testclient import TestClient
                     client = TestClient(app_module.app, raise_server_exceptions=False)
                     response = client.post("/runs/enqueue", json={"mode": "smoke", "no_judge": True})
@@ -148,8 +148,8 @@ class TestAPIEnqueueAuth(unittest.TestCase):
             original = app_module._API_KEY_ENV
             app_module._API_KEY_ENV = "secret-key"
             try:
-                with patch("api.app.enqueue_run", return_value="run-123"), \
-                     patch("api.app.process_queue"):
+                with patch("core.queue.enqueue_run", return_value="run-123"), \
+                     patch("core.queue.process_queue"):
                     from fastapi.testclient import TestClient
                     client = TestClient(app_module.app, raise_server_exceptions=False)
                     response = client.post(

@@ -43,15 +43,26 @@ from core import scheduler  # noqa: E402
 from db.connection import init_db  # noqa: E402
 
 
+def _apply_test_config() -> None:
+    scheduler.DB_PATH = _config_mod.DB_PATH
+    scheduler.SCHEDULER_BUCKET_ID = _config_mod.SCHEDULER_BUCKET_ID
+    scheduler.SCHEDULER_MAX_RPM = _config_mod.SCHEDULER_MAX_RPM
+    scheduler.SCHEDULER_MAX_TPM = _config_mod.SCHEDULER_MAX_TPM
+    scheduler.SCHEDULER_ESTIMATED_OUTPUT_TOKENS = _config_mod.SCHEDULER_ESTIMATED_OUTPUT_TOKENS
+    scheduler._RPM_PER_SEC = _config_mod.SCHEDULER_MAX_RPM / scheduler._WINDOW_SEC
+    scheduler._TPM_PER_SEC = _config_mod.SCHEDULER_MAX_TPM / scheduler._WINDOW_SEC
+
+
+_apply_test_config()
+
+
 def _reset_bucket() -> None:
     """Delete the test bucket row so each test starts fresh."""
+    _apply_test_config()
     conn = sqlite3.connect(_config_mod.DB_PATH)
     conn.execute("DELETE FROM rate_limit_buckets WHERE bucket_id = ?;", (_config_mod.SCHEDULER_BUCKET_ID,))
     conn.commit()
     conn.close()
-    # Also reset module-level cached constants in case they diverged
-    scheduler._RPM_PER_SEC = _config_mod.SCHEDULER_MAX_RPM / scheduler._WINDOW_SEC
-    scheduler._TPM_PER_SEC = _config_mod.SCHEDULER_MAX_TPM / scheduler._WINDOW_SEC
 
 
 class TestSchedulerColdStart(unittest.TestCase):

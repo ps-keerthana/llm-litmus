@@ -157,7 +157,7 @@ def extract_numbers(text: str) -> Set[str]:
         # Skip if immediately preceded by a letter (e.g. inside "194J" after sub)
         if start > 0 and cleaned[start - 1].isalpha():
             continue
-        n = raw.replace(",", "").strip()
+        n = raw.replace(",", "").strip().rstrip(".")
         # Attach % if immediately followed by it
         end = m.end()
         if end < len(cleaned) and cleaned[end] == "%":
@@ -215,10 +215,12 @@ _NEGATIVE_PHRASES = [
 
 # Synonym pairs: (positive_surface, negative_surface) for common phrasing variations.
 # Each pair catches a specific "yes/no" mismatch that the phrase list doesn't cover.
+# IMPORTANT: pairs where one form is a substring of the other must use word-boundary
+# anchors or prefix patterns to avoid false positives (e.g. "ineligible" contains "eligible").
 _SYNONYM_PAIRS: list = [
-    ("eligible", "ineligible"),
-    ("exempt", "not exempt"),
-    ("deductible", "not deductible"),
+    (r"\beligible\b", r"\bineligible\b"),   # regex pair: eligible vs ineligible
+    (r"\bexempt\b", r"\bnot\s+exempt\b"),
+    (r"\bdeductible\b", r"\bnot\s+deductible\b"),
     ("deduction is allowed", "no deduction"),
     ("deduction is available", "deduction is nil"),
     ("deduction is available", "zero deduction"),
@@ -251,14 +253,24 @@ def is_contradicting(answer: str, ground_truth: str) -> bool:
         if gt_negative and pos_phrase in ans_lower and neg_phrase not in ans_lower:
             return True
 
-    # Mechanism 2: synonym pairs
+    # Mechanism 2: synonym pairs (some use regex for word-boundary safety)
     for pos_form, neg_form in _SYNONYM_PAIRS:
-        gt_pos = pos_form in gt_lower
-        gt_neg = neg_form in gt_lower
+        # Check if this is a regex pair (starts with \b)
+        if pos_form.startswith(r"\b"):
+            import re as _re
+            gt_pos = bool(_re.search(pos_form, gt_lower))
+            gt_neg = bool(_re.search(neg_form, gt_lower))
+            ans_pos = bool(_re.search(pos_form, ans_lower))
+            ans_neg = bool(_re.search(neg_form, ans_lower))
+        else:
+            gt_pos = pos_form in gt_lower
+            gt_neg = neg_form in gt_lower
+            ans_pos = pos_form in ans_lower
+            ans_neg = neg_form in ans_lower
 
-        if gt_pos and neg_form in ans_lower and pos_form not in ans_lower:
+        if gt_pos and ans_neg and not ans_pos:
             return True
-        if gt_neg and pos_form in ans_lower and neg_form not in ans_lower:
+        if gt_neg and ans_pos and not ans_neg:
             return True
 
     return False

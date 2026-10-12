@@ -5,9 +5,9 @@
 **Deterministic CI/CD Quality Gate & Evaluation Platform for RAG Pipelines.**
 
 [![CI](https://github.com/ps-keerthana/llm-litmus/actions/workflows/eval.yml/badge.svg)](https://github.com/ps-keerthana/llm-litmus/actions/workflows/eval.yml)
-[![Coverage](https://img.shields.io/badge/coverage-48%25%20total%20%7C%2085%25%2B%20core-brightgreen)](https://github.com/ps-keerthana/llm-litmus)
+[![Coverage](https://img.shields.io/badge/coverage-51%25%20total%20%7C%2085%25%2B%20core-brightgreen)](https://github.com/ps-keerthana/llm-litmus)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
-[![Tests](https://img.shields.io/badge/tests-121%20passed-success)](https://github.com/ps-keerthana/llm-litmus)
+[![Tests](https://img.shields.io/badge/tests-123%20passed-success)](https://github.com/ps-keerthana/llm-litmus)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
 
 [**Live Web App**](https://llm-litmus.vercel.app) · [**Streamlit Dashboard**](#streamlit-dashboard) · [**Quick Start**](#quick-start) · [**Architecture**](#architecture) · [**Ablation Study**](#ablation-study)
@@ -102,11 +102,14 @@ All metrics below are measured directly on active repository runs.
 - **Total API Cost**: **$0.00054**
 
 ### 2. Full Benchmark Baseline (204 Queries, Indian Tax Corpus)
-- **Pass Rate**: **96.6%** (197 / 204 queries passed on baseline model).
-- **Human-Verified Subset (40 queries)**: **97.5%** (39 / 40 passed; +0.93 pp vs full set).
+- **Model**: `llama3.2:1b` (via Ollama, prompt v1.3.0, top-k=5)
+- **Judge Configuration**: `--no-judge` mode (100% evaluated via local deterministic signals in CI)
+- **Pass Rate**: **88.7%** (181 / 204 queries passed on actual LLM benchmark; early mock benchmark `run_20260715_120000.json` reached 96.6% with synthetic responses)
 - **Average Retrieval Hit Rate**: **97.5%**
 - **nDCG@K**: **0.916**
 - **Mean Average Precision (MAP)**: **0.725**
+- **p95 Latency**: **16.46s** (stored inference time)
+- **Human Verification Audit**: Stratified 40-query sample (`datasets/review_sample_40.csv`) exported for manual verification; all `human_verified` flags default to `False` until audited.
 
 ### 3. Empirical Routing Stage Distribution (204 Queries)
 Measured via `scripts/measure_routing_distribution.py`:
@@ -170,7 +173,7 @@ GROQ_API_KEY=gsk_your_groq_api_key_here
 python evaluate.py --smoke --no-judge
 ```
 
-### 4. Run the Unit Test Suite (121 tests, 0 network dependencies)
+### 4. Run the Unit Test Suite (123 tests across 9 files, expanded from original 66 tests)
 
 ```bash
 pytest tests/ -v --cov=core --cov=api

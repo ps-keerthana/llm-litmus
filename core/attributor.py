@@ -75,11 +75,12 @@ def run_counterfactual_diagnosis(result: Dict[str, Any]) -> Tuple[str, str, str,
     
     logger.info(f"[Diagnoser] Running counterfactual sandbox generation for query: '{question[:40]}...'")
     try:
-        cf_answer, _, _ = generate_answer(
+        gen_res = generate_answer(
             question=question,
             context_chunks=gt_chunks,
             temperature=0.0
         )
+        cf_answer = gen_res.answer if hasattr(gen_res, "answer") else gen_res[0]
         cf_sim = compute_semantic_similarity(cf_answer, ground_truth)
         logger.info(f"[Diagnoser] Counterfactual similarity: {cf_sim:.3f}")
         

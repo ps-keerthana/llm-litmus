@@ -38,6 +38,9 @@ class GenerationResult:
         """Backward-compatible (answer, prompt_tokens, completion_tokens) tuple."""
         return self.answer, self.prompt_tokens, self.completion_tokens
 
+    def __iter__(self):
+        return iter((self.answer, self.prompt_tokens, self.completion_tokens))
+
 
 def call_groq_with_retry(
     messages: List[Dict[str, str]],

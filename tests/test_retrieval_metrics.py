@@ -123,6 +123,37 @@ class TestRetrievalMetrics(unittest.TestCase):
         )
         self.assertEqual(metrics["context_precision"], 0.0)
 
+    def test_ndcg_at_k_hand_calculated(self):
+        """
+        nDCG@K hand-computed:
+        DCG = sum(rel_i / log2(i + 1)) for i = 1..k
+        Case: retrieved = [doc_b, doc_a], expected = [doc_a]
+        relevances = [0, 1]
+        DCG = 0/log2(2) + 1/log2(3) = 1 / 1.5849625 ≈ 0.6309
+        Ideal: [1, 0] -> IDCG = 1/log2(2) = 1.0
+        nDCG = 0.6309 / 1.0 = 0.631
+        """
+        metrics = self._run_metrics(
+            retrieved_sources=["doc_b.txt", "doc_a.txt"],
+            expected_source="doc_a.txt",
+        )
+        self.assertEqual(metrics["ndcg_at_k"], 0.631)
+
+    def test_map_score_hand_calculated(self):
+        """
+        MAP (Average Precision) hand-computed:
+        Case: retrieved = [doc_a, doc_x, doc_b], expected = 'doc_a.txt; doc_b.txt'
+        Rank 1 (doc_a): Precision@1 = 1/1 = 1.0
+        Rank 2 (doc_x): irrelevant
+        Rank 3 (doc_b): Precision@3 = 2/3 ≈ 0.6667
+        AP = (1.0 + 0.6667) / 2 = 1.6667 / 2 ≈ 0.833
+        """
+        metrics = self._run_metrics(
+            retrieved_sources=["doc_a.txt", "doc_x.txt", "doc_b.txt"],
+            expected_source="doc_a.txt; doc_b.txt",
+        )
+        self.assertEqual(metrics["map_score"], 0.833)
+
     def test_no_expected_source_returns_defaults(self):
         """Empty expected_source should not crash — return safe defaults."""
         from core.retrieval import evaluate_retrieval

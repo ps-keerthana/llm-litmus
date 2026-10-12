@@ -26,7 +26,7 @@ OLLAMA_MODEL_NAME = os.getenv("OLLAMA_MODEL_NAME", "llama3.2:1b")
 OPENAI_MODEL_NAME = os.getenv("OPENAI_MODEL_NAME", "gpt-4o-mini")
 ANTHROPIC_MODEL_NAME = os.getenv("ANTHROPIC_MODEL_NAME", "claude-3-5-haiku-20241022")
 
-MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "llama-3.3-70b-versatile")
+MODEL_NAME = os.getenv("GROQ_MODEL_NAME", "qwen/qwen3.8-27b")
 EMBEDDING_MODEL_NAME = "all-MiniLM-L6-v2"
 
 # Groq pricing details per 1 million tokens (USD)

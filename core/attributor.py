@@ -170,9 +170,9 @@ def build_retrieval_diagnosis(result: Dict[str, Any]) -> Dict[str, bool]:
     hallucination = result.get("hallucination_rate", 0.0)
     answer = result.get("answer", "").lower()
     
-    if isinstance(faithfulness, str):
+    if not isinstance(faithfulness, (int, float)):
         faithfulness = 1.0
-    if isinstance(hallucination, str):
+    if not isinstance(hallucination, (int, float)):
         hallucination = 0.0
 
     refusal_keywords = ["don't have information", "do not have information", "no information"]

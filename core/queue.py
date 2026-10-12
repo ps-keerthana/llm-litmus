@@ -181,13 +181,14 @@ def process_queue(run_id: str, no_judge: bool = False, provider: Optional[str] =
 
             # ── 2. Generation Step ───────────────────────────────
             gen_start = time.time()
-            answer, gen_p, gen_c = generate_answer(question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE, provider_name=provider)
+            gen_result = generate_answer(question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE, provider_name=provider)
+            answer, gen_p, gen_c = gen_result.as_tuple()
             elapsed = time.time() - gen_start
 
-            if _generator_mod.WAS_LAST_CALL_CACHED:
+            if gen_result.was_cached:
                 cached_hits += 1
 
-            latency = round(max(0.0, elapsed - _generator_mod.LAST_API_SLEEP_TIME), 2)
+            latency = round(max(0.0, elapsed - gen_result.sleep_time), 2)
 
             # ── 3. Evaluation & LLM Judge Step ────────────────────
             semantic_sim = compute_semantic_similarity(answer, ground_truth)

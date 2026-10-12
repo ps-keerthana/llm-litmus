@@ -5,14 +5,38 @@ ProviderClient abstraction. Handles caching, cost calculation, and latency track
 """
 
 import logging
+from dataclasses import dataclass
 from typing import List, Tuple, Dict, Any, Optional
 from core.providers import get_provider_client, CompletionResult
 
 logger = logging.getLogger(__name__)
 
-# Module-level globals to track wait latency and cache status
+# Internal scheduler side-channel: groq.py writes the cumulative sleep time
+# accumulated during rate-limit waits for a single generate_answer() call.
+# Callers should read .sleep_time from the returned GenerationResult instead
+# of accessing these globals directly — the globals are an implementation detail.
 LAST_API_SLEEP_TIME: float = 0.0
 WAS_LAST_CALL_CACHED: bool = False
+
+
+@dataclass
+class GenerationResult:
+    """
+    Structured return value from generate_answer().
+
+    Prefer reading sleep_time and was_cached from this object rather than
+    from the module-level globals (LAST_API_SLEEP_TIME / WAS_LAST_CALL_CACHED),
+    which are maintained only for backward compatibility with groq.py's scheduler.
+    """
+    answer: str
+    prompt_tokens: int
+    completion_tokens: int
+    sleep_time: float = 0.0   # seconds spent sleeping due to rate limits
+    was_cached: bool = False   # True if the result came from the cache
+
+    def as_tuple(self) -> Tuple[str, int, int]:
+        """Backward-compatible (answer, prompt_tokens, completion_tokens) tuple."""
+        return self.answer, self.prompt_tokens, self.completion_tokens
 
 
 def call_groq_with_retry(
@@ -44,13 +68,14 @@ def generate_answer(
     system_prompt: Optional[str] = None,
     temperature: float = 0.0,
     provider_name: Optional[str] = None,
-) -> Tuple[str, int, int]:
+) -> GenerationResult:
     """
     Generates an answer using retrieved document context via configured ProviderClient.
     Handles content-addressable caching and latency tracking.
 
     Returns:
-        (generated_answer, prompt_tokens, completion_tokens)
+        GenerationResult with answer, token counts, sleep_time, and was_cached flag.
+        Call .as_tuple() for the legacy (answer, prompt_tokens, completion_tokens) form.
     """
     global LAST_API_SLEEP_TIME, WAS_LAST_CALL_CACHED
     LAST_API_SLEEP_TIME = 0.0
@@ -89,10 +114,12 @@ Answer:"""
     cached = lookup_cache(cache_key)
     if cached is not None:
         WAS_LAST_CALL_CACHED = True
-        return (
-            cached["answer"],
-            cached["prompt_tokens"],
-            cached["completion_tokens"]
+        return GenerationResult(
+            answer=cached["answer"],
+            prompt_tokens=cached["prompt_tokens"],
+            completion_tokens=cached["completion_tokens"],
+            sleep_time=0.0,
+            was_cached=True,
         )
 
     try:
@@ -109,14 +136,32 @@ Answer:"""
         update_cache(cache_key, {
             "answer": answer,
             "prompt_tokens": prompt_tokens,
-            "completion_tokens": completion_tokens
+            "completion_tokens": completion_tokens,
         })
 
-        return answer, prompt_tokens, completion_tokens
+        # Read sleep time written by groq.py's scheduler (side-channel global)
+        sleep_time = LAST_API_SLEEP_TIME
+
+        return GenerationResult(
+            answer=answer,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            sleep_time=sleep_time,
+            was_cached=False,
+        )
 
     except Exception as e:
-        logger.error("[Generator] Failed to generate answer via provider '%s': %s", provider.get_model_name(), e)
-        return "I don't have information about that. (Error: LLM generation failed)", 0, 0
+        logger.error(
+            "[Generator] Failed to generate answer via provider '%s': %s",
+            provider.get_model_name(), e,
+        )
+        return GenerationResult(
+            answer="I don't have information about that. (Error: LLM generation failed)",
+            prompt_tokens=0,
+            completion_tokens=0,
+            sleep_time=0.0,
+            was_cached=False,
+        )
 
 
 def calculate_cost(prompt_tokens: int, completion_tokens: int) -> float:

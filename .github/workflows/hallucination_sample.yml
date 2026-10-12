@@ -1,0 +1,72 @@
+name: Weekly Hallucination Sample Check
+
+# Runs weekly to measure hallucination rate on a 30-query sample using the LLM judge.
+# This is the ONLY workflow that runs with judge enabled, because it requires a real
+# Groq API key (GROQ_API_KEY secret). It is NOT a blocking merge gate — it is a
+# monitoring signal. Results appear in the Actions summary and metrics_history.json.
+
+on:
+  schedule:
+    - cron: '0 6 * * 1'   # Every Monday at 06:00 UTC
+  workflow_dispatch:        # Manual trigger from Actions UI
+
+jobs:
+  hallucination-sample:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Check GROQ_API_KEY is set
+        run: |
+          if [ -z "$GROQ_API_KEY" ]; then
+            echo "::error::GROQ_API_KEY secret is not set. Add it in repo Settings → Secrets."
+            exit 1
+          fi
+          echo "GROQ_API_KEY is set."
+
+      - name: Run 30-query smoke test with judge enabled (Groq)
+        run: |
+          # Run smoke mode (up to 10 balanced queries) with judge enabled.
+          # smoke mode picks 2/category × 5 categories = 10 queries — cheap but representative.
+          # Increase SMOKE_PER_CATEGORY or use --dataset to get 30+ queries.
+          python evaluate.py --provider groq --smoke
+          echo "Judge-enabled run complete. Check eval_summary.md for hallucination rate."
+
+      - name: Verify hallucination gate (judge-enabled result)
+        run: python ci_gate.py --mode full
+
+      - name: Publish Actions Step Summary
+        if: always()
+        run: |
+          if [ -f eval_summary.md ]; then
+            echo "## Weekly Hallucination Sample" >> $GITHUB_STEP_SUMMARY
+            cat eval_summary.md >> $GITHUB_STEP_SUMMARY
+          fi
+
+      - name: Upload run report
+        uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: hallucination-sample-${{ github.run_id }}
+          path: eval_results/
+          retention-days: 14

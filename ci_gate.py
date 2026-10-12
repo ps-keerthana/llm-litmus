@@ -318,9 +318,18 @@ def main() -> None:
 
     write_markdown_summary(latest, failures)
 
-    if failures:
+    # Separate informational SKIPPED warnings from hard gate failures.
+    hard_failures = [f for f in failures if not f.startswith("⚠️  SKIPPED")]
+    warnings_only  = [f for f in failures if f.startswith("⚠️  SKIPPED")]
+
+    if warnings_only:
+        logger.warning("[GATE WARNINGS] — these do not block the merge:")
+        for w in warnings_only:
+            logger.warning("  %s", w)
+
+    if hard_failures:
         logger.error("[GATE FAILED]")
-        for f in failures:
+        for f in hard_failures:
             logger.error("  - %s", f)
         sys.exit(1)
     else:

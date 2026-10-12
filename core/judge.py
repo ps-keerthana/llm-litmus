@@ -145,14 +145,18 @@ def llm_judge_evaluate(
         return metrics, result.prompt_tokens, result.completion_tokens
 
     except Exception as e:
+        # A judge API failure must NOT silently produce perfect scores.
+        # Return a sentinel so evaluate.py can exclude this record from
+        # faithfulness/hallucination averages and flag it as an error.
         print(f"  [Judge] LLM judge failed: {e}")
         return {
-            "correctness":   0.0,
-            "faithfulness":  1.0,
-            "completeness":  1.0,
-            "hallucination": 0.0,
+            "correctness":   None,
+            "faithfulness":  None,
+            "completeness":  None,
+            "hallucination": None,
             "confidence":    0.0,
-            "reasoning":     f"Fallback applied due to evaluation error: {e}",
+            "reasoning":     f"judge_error: {e}",
+            "judge_error":   True,
         }, 0, 0
 
 

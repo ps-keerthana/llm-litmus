@@ -1,22 +1,18 @@
 # ── Core evaluation dependencies ──────────────────────────────────────────────
-groq>=1.0.0
-openai>=1.0.0
-sentence-transformers>=5.0.0
-chromadb>=1.0.0
-python-dotenv>=1.0.0
-numpy>=2.0.0
+# Using compatible-release (~=) pins to accept patches but not major/minor bumps.
+groq~=0.12                 # Groq LLM API client (llama-3.3-70b-versatile)
+openai~=1.50               # OpenAI API client (gpt-4o-mini)
+anthropic~=0.36            # Anthropic API client (claude-3-5-haiku)
+sentence-transformers~=3.0 # all-MiniLM-L6-v2 embeddings
+chromadb~=0.5              # Vector store (persistent + in-memory)
+python-dotenv~=1.0         # .env loading
+numpy~=1.26                # Numeric ops (pinned below 2.0 for compatibility)
 
 # ── Dashboard ─────────────────────────────────────────────────────────────────
-streamlit>=1.50.0
-pandas>=2.0.0
-plotly>=6.0.0
+streamlit~=1.39            # Streamlit dashboard
+pandas~=2.2                # DataFrame ops
+plotly~=5.24               # Interactive charts
 
 # ── Backend API service ───────────────────────────────────────────────────────
-fastapi>=0.115.0
-uvicorn[standard]>=0.32.0
-
-# ── Development tools (testing + coverage) ────────────────────────────────────
-# Install with: pip install pytest pytest-cov
-# These are NOT required for running the evaluation pipeline itself.
-pytest>=8.0.0
-pytest-cov>=5.0.0
+fastapi~=0.115
+uvicorn[standard]~=0.32

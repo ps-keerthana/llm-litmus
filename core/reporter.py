@@ -50,8 +50,17 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
         failures.append(f"Pass rate {latest_pass_rate}% falls below absolute threshold {THRESHOLD_PASS_RATE}%")
 
     latest_hall = latest.get("hallucination_rate_avg", 0.0)
-    if isinstance(latest_hall, (int, float)) and latest_hall > THRESHOLD_HALLUCINATION:
-        failures.append(f"Average hallucination rate {latest_hall:.3f} exceeds absolute threshold {THRESHOLD_HALLUCINATION}")
+    if isinstance(latest_hall, (int, float)):
+        if latest_hall > THRESHOLD_HALLUCINATION:
+            failures.append(
+                f"Average hallucination rate {latest_hall:.3f} exceeds absolute threshold {THRESHOLD_HALLUCINATION}"
+            )
+    else:
+        # judge was disabled — hallucination is "Not Evaluated"; surface this clearly.
+        failures.append(
+            f"⚠️  SKIPPED: hallucination gate not enforced — judge was disabled (--no-judge). "
+            f"Run with judge enabled on a sample to measure hallucination rate."
+        )
 
     latest_p95 = latest.get("p95_latency_sec", 0.0)
     # Latency SLA only applies to cloud API providers (Groq, OpenAI, Anthropic).
@@ -90,7 +99,7 @@ def check_regressions(latest: Dict[str, Any], baseline: Dict[str, Any]) -> List[
         if not is_local_provider and base_p95 > 0:
             latency_pct = ((latest_p95 - base_p95) / base_p95) * 100.0
             latency_abs = latest_p95 - base_p95
-            if latency_pct > REGRESSION_LIMIT_P95_LATENCY_PERCENT and latency_abs > REGRESSION_LIMIT_P95_LATENCY_ABS:
+            if latency_pct > REGRESSION_LIMIT_P95_LATENCY_PERCENT or latency_abs > REGRESSION_LIMIT_P95_LATENCY_ABS:
                 failures.append(
                     f"p95 latency slowed down by {latency_pct:.1f}% / +{latency_abs:.2f}s "
                     f"(from {base_p95:.2f}s to {latest_p95:.2f}s) exceeding limits"

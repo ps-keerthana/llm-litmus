@@ -5,14 +5,18 @@ Unit tests for core/metrics.py
 
 Covers:
   - compute_token_f1: perfect match, zero overlap, partial, empty strings
-  - extract_numbers: Indian currency formats, percentages, section exclusions
+  - extract_numbers: Indian currency formats (₹/Rs./INR), lakh/crore normalisation,
+                     percentages, section code exclusion
   - numbers_consistent: missing numbers, subset match, no numbers in GT
-  - is_contradicting: polarity flip detection, no-contradiction passthrough
+  - is_contradicting: polarity flip detection, synonym pairs (ineligible, nil),
+                      no-contradiction passthrough
   - multi_signal_auto_pass: all-pass, semantic-fail, f1-fail, number-fail
 
-These tests are pure logic tests — no LLM calls, no network, no embedder.
-The embedder import in core.retrieval is lazy-loaded inside functions, so
-importing core.metrics directly does NOT trigger sentence-transformer loading.
+These tests are pure logic tests — no LLM calls, no network.
+core.metrics now lazy-loads the embedder via _get_embedder(), so importing
+core.metrics does NOT trigger sentence-transformer model loading at import time.
+The compute_semantic_similarity function is excluded from these tests because it
+requires the embedder; it is tested via the mock in test_judge_routing.py.
 """
 
 import os
@@ -94,15 +98,29 @@ class TestExtractNumbers(unittest.TestCase):
         self.assertIn("50000", nums)
 
     def test_rupee_symbol(self):
-        """Rupee sign should be stripped from extracted values."""
+        """Rupee sign should be stripped; commas removed."""
         nums = extract_numbers("The deduction limit is ₹1,50,000.")
-        # Normalised: commas removed → "150000"
-        self.assertTrue(any("150000" in n for n in nums))
+        self.assertIn("150000", nums)
+
+    def test_rs_prefix(self):
+        """Rs. prefix should be handled like ₹."""
+        nums = extract_numbers("Penalty is Rs. 1,50,000.")
+        self.assertIn("150000", nums)
+
+    def test_inr_prefix(self):
+        """INR prefix should be normalised."""
+        nums = extract_numbers("Limit is INR 50000.")
+        self.assertIn("50000", nums)
 
     def test_lakh_suffix(self):
-        """Numbers with lakh suffix should be extracted as a unit."""
+        """1.5 lakh should be extracted as the integer 150000."""
         nums = extract_numbers("Deduction of ₹1.5 lakh is allowed.")
-        self.assertTrue(any("lakh" in n for n in nums))
+        self.assertIn("150000", nums, f"Expected 150000 in {nums}")
+
+    def test_crore_suffix(self):
+        """2 crore should be extracted as 20000000."""
+        nums = extract_numbers("Turnover is 2 crore.")
+        self.assertIn("20000000", nums, f"Expected 20000000 in {nums}")
 
     def test_percentage(self):
         """Percentages like 10% should be captured."""
@@ -112,8 +130,9 @@ class TestExtractNumbers(unittest.TestCase):
     def test_section_numbers_excluded(self):
         """Section identifiers like 80C or 194J must NOT be extracted as numbers."""
         nums = extract_numbers("Under Section 80C, the limit is ₹1.5 lakh.")
-        # "80" must NOT appear as a standalone numeric match
-        self.assertFalse(any(n == "80" for n in nums))
+        self.assertNotIn("80", nums, f"Section codes should not appear: {nums}")
+        # The lakh amount should still be present
+        self.assertIn("150000", nums)
 
     def test_empty_string(self):
         """Empty input should return an empty set."""
@@ -170,6 +189,13 @@ class TestNumbersConsistent(unittest.TestCase):
 class TestIsContradicting(unittest.TestCase):
     """Tests for is_contradicting(answer, ground_truth)."""
 
+    def test_lakh_crore_consistency(self):
+        """1.5 lakh in GT and 150000 in answer are now treated as equal."""
+        self.assertTrue(numbers_consistent(
+            "The deduction limit is Rs. 1,50,000 per year.",
+            "The deduction cap is ₹1.5 lakh annually."
+        ))
+
     def test_no_contradiction(self):
         """Both agreeing on a positive claim → no contradiction."""
         self.assertFalse(is_contradicting(
@@ -196,6 +222,27 @@ class TestIsContradicting(unittest.TestCase):
         self.assertFalse(is_contradicting(
             "The tax rate is 10%.",
             "LTCG tax rate under Section 112A is 10%."
+        ))
+
+    def test_ineligible_synonym(self):
+        """'ineligible' in answer vs 'eligible' in GT → contradiction."""
+        self.assertTrue(is_contradicting(
+            "NPS contribution is ineligible for deduction.",
+            "NPS contribution is eligible for deduction."
+        ))
+
+    def test_nil_deduction_synonym(self):
+        """'deduction is nil' in answer vs 'deduction is available' in GT → contradiction."""
+        self.assertTrue(is_contradicting(
+            "The deduction is nil for salaried employees.",
+            "The deduction is available for salaried employees."
+        ))
+
+    def test_not_exempt_synonym(self):
+        """'not exempt' in answer vs 'exempt' in GT → contradiction."""
+        self.assertTrue(is_contradicting(
+            "HRA allowance is not exempt under the new regime.",
+            "HRA allowance is exempt under the old regime."
         ))
 
 

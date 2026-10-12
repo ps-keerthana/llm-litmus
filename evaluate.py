@@ -158,19 +158,20 @@ def run_evaluation(
         # ── 2. Generation ────────────────────────────────────────────────
         with tracer.span("generation", query_id=q_id) as gen_span:
             gen_start = time.time()
-            answer, gen_p, gen_c = generate_answer(
+            gen_result = generate_answer(
                 question, retrieved_chunks, temperature=DEFAULT_TEMPERATURE,
                 provider_name=provider,
             )
+            answer, gen_p, gen_c = gen_result.as_tuple()
             elapsed = time.time() - gen_start
             gen_span.set("prompt_tokens", gen_p)
             gen_span.set("completion_tokens", gen_c)
-            gen_span.set("cached", _generator_mod.WAS_LAST_CALL_CACHED)
+            gen_span.set("cached", gen_result.was_cached)
 
-        if _generator_mod.WAS_LAST_CALL_CACHED:
+        if gen_result.was_cached:
             cached_hits += 1
 
-        latency = round(max(0.0, elapsed - _generator_mod.LAST_API_SLEEP_TIME), 2)
+        latency = round(max(0.0, elapsed - gen_result.sleep_time), 2)
 
         # ── 3. Evaluation ────────────────────────────────────────────────
         with tracer.span("evaluation", query_id=q_id) as eval_span:
@@ -205,7 +206,21 @@ def run_evaluation(
         total_c = gen_c + judge_c
         cost = calculate_cost(total_p, total_c)
 
-        # ── Pass/Fail Classification ──────────────────────────────────────
+        # ── Pass/Fail Classification ─────────────────────────────────────────
+        # DESIGN NOTE — two gates exist in this pipeline:
+        #
+        #   Gate 1 (oracle routing, in judge.py):
+        #     The 4-signal gate (semantic>=0.85 AND token_f1>=0.60 AND numbers AND
+        #     negation) decides whether to auto-pass/auto-fail/call LLM judge.
+        #     It is a *routing* gate, not the final classification.
+        #
+        #   Gate 2 (final classification, here):
+        #     After routing and optional LLM judging, PASS/FAIL is decided by:
+        #       - sem_sim >= MIN_SEMANTIC_SIM (0.65), OR
+        #       - judge correctness >= MIN_LLM_CORRECTNESS (0.75)
+        #     This allows borderline queries that cleared semantic similarity to
+        #     pass even if judge scores slightly below the stricter oracle threshold.
+        #     Both gates are documented in the README under "How scoring works".
         is_correct = semantic_sim >= MIN_SEMANTIC_SIM or (
             isinstance(judge_metrics.get("correctness"), (int, float))
             and judge_metrics["correctness"] >= MIN_LLM_CORRECTNESS

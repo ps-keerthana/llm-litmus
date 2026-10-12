@@ -1,6 +1,12 @@
 """
-Populate SQLite database from JSON files in eval_results/ directory.
-This ensures the API serves all real historic runs, instead of only the mocked test run.
+scripts/populate_db_runs.py
+===========================
+Populates the SQLite database (eval_platform.db) from existing run JSON files
+in the eval_results/ directory.
+
+NOTE: This utility is strictly for seeding/importing evaluation run outputs into
+the local database for dashboard and API demo purposes. It does not perform live
+LLM inference, does not generate synthetic data, and does not alter metrics_history.json.
 """
 import os
 import sys

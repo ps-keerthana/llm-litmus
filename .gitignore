@@ -24,6 +24,8 @@ eval_summary.md
 
 # ── Database files ────────────────────────────────────────────────────────────
 eval_platform.db
+*.db-shm
+*.db-wal
 # Persistent ChromaDB index (re-built from docs/ on first run)
 db/chroma/
 

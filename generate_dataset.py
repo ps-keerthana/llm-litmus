@@ -49,25 +49,8 @@ VALID_DIFFICULTIES = {"easy", "medium", "hard"}
 VALID_REASONING    = {"direct_lookup", "multi_step", "comparative", "negation", "numerical"}
 
 
-# ── Document Loading (Phase 1: .txt + .md) ────────────────────────────────
-
-def load_docs(folder: Optional[str] = None) -> List[Dict[str, str]]:
-    """Loads text chunks from all .txt and .md files in the docs folder."""
-    folder = folder or config.DOCS_FOLDER
-    chunks = []
-    if not os.path.exists(folder):
-        print(f"[WARNING] Docs folder '{folder}' not found.")
-        return chunks
-    for filename in sorted(os.listdir(folder)):
-        if filename.endswith((".txt", ".md")):
-            path = os.path.join(folder, filename)
-            with open(path, "r", encoding="utf-8") as f:
-                text = f.read()
-            for chunk in text.strip().split("\n\n"):
-                chunk = chunk.strip()
-                if len(chunk) > 40:
-                    chunks.append({"source": filename, "text": chunk})
-    return chunks
+# ── Document Loading (Consolidated from core/retrieval.py) ─────────────────
+from core.retrieval import load_docs
 
 
 def load_existing_dataset(filepath: str) -> List[Dict[str, Any]]:

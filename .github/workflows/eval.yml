@@ -40,7 +40,15 @@ jobs:
             ${{ runner.os }}-pip-
 
       - name: Install dependencies
-        run: pip install -r requirements.txt
+        run: |
+          pip install -r requirements.txt
+          pip install pytest pytest-cov httpx  # dev tools for test step
+
+      - name: Run unit tests
+        run: |
+          python -m pytest tests/ -v --tb=short \
+            --cov=core --cov=api --cov-report=term-missing \
+            --ignore=tests/test_retrieval_metrics.py  # skipped in CI (requires chromadb)
 
       - name: Cache SQLite Evaluation Database
         uses: actions/cache@v4

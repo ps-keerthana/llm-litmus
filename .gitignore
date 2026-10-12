@@ -12,6 +12,7 @@ build/
 # ── Environment & secrets ─────────────────────────────────────────────────────
 .env
 .env.*
+!.env.example
 
 # ── Evaluation artefacts ──────────────────────────────────────────────────────
 # Individual run results (too large for git; only metrics_history.json is tracked)

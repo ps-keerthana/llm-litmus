@@ -10,7 +10,6 @@ from __future__ import annotations
 import json
 import os
 import sys
-from datetime import datetime
 from typing import Any, Dict, List, Optional, Union
 
 from dotenv import load_dotenv
@@ -19,8 +18,9 @@ load_dotenv()
 # Ensure project root is importable regardless of working directory
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Security, status
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import APIKeyHeader
 from pydantic import BaseModel, field_validator
 
 from config import (
@@ -37,17 +37,42 @@ from db.connection import db_transaction, get_db_connection, init_db
 # ── App Bootstrap ──────────────────────────────────────────────────────────
 app = FastAPI(
     title="LLM Eval Platform API",
-    description="REST API for the Tax RAG evaluation pipeline.",
+    description="REST API for the LLM-Litmus RAG evaluation platform.",
     version="1.0.0",
 )
 
-# Allow Streamlit and any browser-based client to call this API.
+# CORS: restrict to explicitly listed origins via ALLOWED_ORIGINS env var.
+# Default to localhost Streamlit and common dev ports. Never '*' in production.
+_raw_origins = os.getenv(
+    "ALLOWED_ORIGINS",
+    "http://localhost:8501,http://localhost:3000,http://127.0.0.1:8501",
+)
+ALLOWED_ORIGINS: list[str] = [o.strip() for o in _raw_origins.split(",") if o.strip()]
+
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
-    allow_methods=["*"],
+    allow_origins=ALLOWED_ORIGINS,
+    allow_methods=["GET", "POST"],
     allow_headers=["*"],
 )
+
+# ── API Key Auth (write endpoints only) ──────────────────────────────────────
+# Set API_KEY env var to enable authentication. If unset, auth is skipped
+# (suitable for local development only — always set it in production).
+_API_KEY_ENV: Optional[str] = os.getenv("API_KEY")  # None means auth disabled
+_api_key_header = APIKeyHeader(name="X-API-Key", auto_error=False)
+
+
+def _require_api_key(key: Optional[str] = Security(_api_key_header)) -> None:
+    """FastAPI dependency that enforces X-API-Key for write/trigger endpoints."""
+    if _API_KEY_ENV is None:
+        # No API_KEY set → auth disabled (local dev mode).
+        return
+    if key != _API_KEY_ENV:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing API key. Set X-API-Key header.",
+        )
 
 
 @app.on_event("startup")
@@ -427,7 +452,8 @@ def get_queue_status(run_id: str) -> List[QueueTaskStatus]:
     ]
 
 
-@app.post("/runs/enqueue", response_model=EnqueueResponse, tags=["Runs"])
+@app.post("/runs/enqueue", response_model=EnqueueResponse, tags=["Runs"],
+          dependencies=[Depends(_require_api_key)])
 def enqueue_run_endpoint(
     request: EnqueueRequest, background_tasks: BackgroundTasks
 ) -> EnqueueResponse:

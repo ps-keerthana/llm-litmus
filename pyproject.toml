@@ -45,7 +45,8 @@ providers = [
 ]
 
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["litmus_v2/tests"]
+pythonpath = [".", "litmus_v1"]
 addopts = "-v --tb=short"
 filterwarnings = [
     "ignore::DeprecationWarning:chromadb",

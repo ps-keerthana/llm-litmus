@@ -1,7 +1,10 @@
 {
   "version": 2,
   "name": "llm-litmus",
+  "framework": null,
   "outputDirectory": "web",
+  "buildCommand": "",
+  "installCommand": "",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [

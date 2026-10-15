@@ -14,10 +14,16 @@ DOMAIN_DESCRIPTION = os.getenv("EVAL_DOMAIN_DESCRIPTION", "General Q&A knowledge
 COLLECTION_NAME = os.getenv("EVAL_COLLECTION_NAME", "litmus_eval")
 
 # ── File System Paths ──────────────────────────────────────
-DATASET_PATH = os.getenv("DATASET_PATH", "golden_dataset.csv")
-DOCS_FOLDER = os.getenv("DOCS_FOLDER", "docs")
-EVAL_RESULTS_DIR = "eval_results"
-METRICS_HISTORY_PATH = "metrics_history.json"
+_base_dir = os.path.dirname(os.path.abspath(__file__))
+_parent_docs = os.path.join(_base_dir, "..", "docs")
+_default_docs = "docs" if os.path.isdir("docs") else (_parent_docs if os.path.isdir(_parent_docs) else "docs")
+_local_dataset = os.path.join(_base_dir, "golden_dataset.csv")
+_default_dataset = "golden_dataset.csv" if os.path.exists("golden_dataset.csv") else _local_dataset
+
+DATASET_PATH = os.getenv("DATASET_PATH", _default_dataset)
+DOCS_FOLDER = os.getenv("DOCS_FOLDER", _default_docs)
+EVAL_RESULTS_DIR = os.getenv("EVAL_RESULTS_DIR", os.path.join(_base_dir, "eval_results"))
+METRICS_HISTORY_PATH = os.getenv("METRICS_HISTORY_PATH", os.path.join(_base_dir, "metrics_history.json"))
 
 # ── Model & API Settings ──────────────────────────────────
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "groq")  # Options: "groq", "ollama", "openai", "anthropic"

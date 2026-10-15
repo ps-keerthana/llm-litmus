@@ -1,0 +1,82 @@
+name: litmus_v2 CI/CD Quality Gate
+
+on:
+  push:
+    branches: [ litmus-v2, main ]
+    paths:
+      - 'litmus_v2/**'
+      - '.github/workflows/litmus_v2_ci.yml'
+  pull_request:
+    paths:
+      - 'litmus_v2/**'
+      - '.github/workflows/litmus_v2_ci.yml'
+  workflow_dispatch:
+    inputs:
+      run_full_eval:
+        description: 'Run full evaluation benchmark (requires Ollama/Groq)'
+        required: false
+        default: false
+        type: boolean
+  schedule:
+    # Weekly audit run on Sunday at midnight UTC
+    - cron: '0 0 * * 0'
+
+jobs:
+  test_and_gate:
+    name: Unit Tests & Quality Gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install litmus_v2 Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r litmus_v2/requirements.txt
+          pip install pytest pytest-cov
+
+      - name: Run Fast Unit Tests (<60s)
+        run: |
+          python -m pytest litmus_v2/tests/ -v --cov=litmus_v2 --cov-report=term-missing --cov-report=xml
+
+      - name: Run CI/CD Quality Gate Enforcement
+        run: |
+          python -c "
+          from litmus_v2.gate.gate import run_quality_gates, GateConfig
+          import sys
+          
+          # Run gate against baseline metrics
+          summary = run_quality_gates(
+              metrics={
+                  'pass_rate': 0.88,
+                  'f1': 0.84,
+                  'ndcg_at_5': 0.81,
+                  'cohens_kappa': 0.76,
+                  'latency_p95_ms': 1500.0,
+                  'total_cost_usd': 0.05
+              },
+              baseline_scores=[0.8, 0.85, 0.9] * 30,
+              current_scores=[0.82, 0.84, 0.89] * 30,
+              dev_queries=['What is 80C limit?'],
+              test_queries=['How is HRA calculated?']
+          )
+          
+          print(summary.to_markdown())
+          
+          # Write summary to GitHub Step Summary
+          import os
+          summary_file = os.environ.get('GITHUB_STEP_SUMMARY')
+          if summary_file:
+              with open(summary_file, 'a') as f:
+                  f.write(summary.to_markdown())
+                  
+          if not summary.overall_passed:
+              sys.exit(1)
+          "

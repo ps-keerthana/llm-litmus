@@ -922,6 +922,8 @@
     "avg_ndcg_at_k": 0.916,
     "avg_precision_at_k": 0.683,
     "avg_map_score": 2.455,
+    "avg_map_score_recomputed": 0.869,
+    "avg_map_score_note": "Recomputed with deduplicated average precision formula. Original 2.455 was raw un-deduplicated value where multi-chunk hits per source compounded.",
     "avg_coverage": 0.942,
     "avg_latency_sec": 8.74,
     "p50_latency_sec": 7.36,

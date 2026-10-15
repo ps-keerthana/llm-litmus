@@ -5,7 +5,7 @@
 **Deterministic CI/CD Quality Gate & Evaluation Platform for RAG Pipelines.**
 
 [![CI](https://github.com/ps-keerthana/llm-litmus/actions/workflows/eval.yml/badge.svg)](https://github.com/ps-keerthana/llm-litmus/actions/workflows/eval.yml)
-[![Coverage](https://img.shields.io/badge/coverage-51%25%20total%20%7C%2085%25%2B%20core-brightgreen)](https://github.com/ps-keerthana/llm-litmus)
+[![Coverage](https://img.shields.io/badge/coverage-48%25%20total%20(123%20passed)-brightgreen)](https://github.com/ps-keerthana/llm-litmus)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10+-blue.svg)](https://www.python.org/downloads/)
 [![Tests](https://img.shields.io/badge/tests-123%20passed-success)](https://github.com/ps-keerthana/llm-litmus)
 [![License: MIT](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
@@ -107,19 +107,19 @@ All metrics below are measured directly on active repository runs.
 - **Pass Rate**: **88.7%** (181 / 204 queries passed)
 - **Retrieval Hit Rate**: **97.5%**
 - **nDCG@K**: **0.916**
-- **Mean Average Precision (MAP)**: **0.725**
+- **Mean Average Precision (MAP)**: **0.869** (corrected formula deduplicating multi-chunk hits per document; originally recorded as raw un-deduplicated 2.455)
 - **p95 Latency**: **16.46s** (stored inference time)
 - **Human Verification Audit**: Stratified 40-query sample exported to `datasets/review_sample_40.csv`; all `human_verified` flags default to `False` pending manual review.
 
 ### 3. Empirical Routing Stage Distribution
-Measured via `scripts/measure_routing_distribution.py` on active benchmark queries:
+Measured via `scripts/measure_routing_distribution.py` on active benchmark queries (`run_20261013_022240.json`, `qwen/qwen3.8-27b` via Groq, prompt v1.3.0):
 - **Auto-Pass (All 4 signals agree)**: **40.0%** (4 / 10)
 - **Auto-Fail (sim ≤ 0.25)**: **0.0%** (0 / 10)
 - **Refusals (Safe bypass)**: **10.0%** (1 / 10)
 - **Sent to LLM Judge (when enabled)**: **50.0%** (5 / 10)
 - **Judge Calls Saved**: **50.0%** on live evaluation; **100%** saved in CI using `--no-judge`.
 
-> **Honest Engineering Finding**: The 4-signal heuristic filter safely auto-passes clear agreements and detects refusals, cutting judge API calls by 50% in live runs and 100% in CI (`--no-judge`), while routing borderline and nuanced queries to the judge when high fidelity is required.
+> **Note on Full 204-Query Routing**: Running the full 204 queries with the LLM judge enabled requires ~30+ minutes under provider rate-limit spacing (6s delay per call) and risks daily token limit exhaustion. The pipeline intentionally uses `--no-judge` for full baseline CI runs to achieve 0 judge API cost.
 
 ---
 
@@ -179,11 +179,49 @@ python evaluate.py --smoke --no-judge
 pytest tests/ -v --cov=core --cov=api
 ```
 
+**Measured Per-Module Coverage (48% overall, 123 passing):**
+
+| Module | Statements | Missing | Coverage | Key Component |
+|---|---|---|---|---|
+| `core/providers/base.py` | 17 | 2 | **88%** | Base provider interface |
+| `core/generator.py` | 53 | 7 | **87%** | RAG generation & prompt templates |
+| `core/metrics.py` | 114 | 16 | **86%** | Multi-signal heuristics & cosine |
+| `core/scheduler.py` | 130 | 19 | **85%** | Token-bucket rate limiter |
+| `core/providers/anthropic.py` | 13 | 3 | **77%** | Anthropic client adapter |
+| `core/reporter.py` | 68 | 17 | **75%** | Regression checks & metrics logger |
+| `api/app.py` | 211 | 58 | **73%** | FastAPI platform & health endpoints |
+| `core/attributor.py` | 100 | 48 | **52%** | Failure attribution & diagnosis |
+| `core/retrieval.py` | 187 | 109 | **42%** | Chunking, ChromaDB, retrieval metrics |
+| `core/providers/factory.py` | 26 | 15 | **42%** | Provider instantiation factory |
+| `core/utils.py` | 21 | 13 | **38%** | Text utils & loggers |
+| `core/judge.py` | 97 | 61 | **37%** | LLM judge & ensemble routing |
+| `ci_gate.py` | 183 | 127 | **31%** | CI gate CLI & comparison reports |
+| `core/providers/openai.py` | 34 | 23 | **32%** | OpenAI provider adapter |
+| `core/cache.py` | 39 | 28 | **28%** | Local query result cache |
+| `core/providers/ollama.py` | 37 | 27 | **27%** | Ollama local adapter |
+| `core/providers/groq.py` | 78 | 63 | **19%** | Groq cloud adapter |
+| `core/queue.py` | 175 | 156 | **11%** | Background evaluation queue |
+| `core/telemetry.py` | 64 | 64 | **0%** | JSONL span telemetry |
+
 ### 5. Check CI Quality Gate
 
 ```bash
 python ci_gate.py --mode smoke
 ```
+
+**Quality Gate Thresholds (`config.py` & `core/reporter.py`):**
+- **Absolute Gate Thresholds**:
+  - Pass Rate: **≥ 70.0%**
+  - Hallucination Rate: **≤ 0.05 (5.0%)** (enforced when judge is enabled)
+  - Retrieval Hit Rate: **≥ 80.0%**
+  - p95 Latency: **≤ 3.5s** (cloud API providers only)
+- **Relative Regression Limits vs. Baseline**:
+  - Pass Rate Drop: **≤ 5.0%** (percentage points)
+  - Hallucination Rate Increase: **≤ 0.02**
+  - Retrieval Hit Rate Drop: **≤ 5.0%**
+  - p95 Latency Slowdown: **≤ 15.0% or +0.3s**
+  - Average Cost Increase: **≤ 20.0%**
+- **Smoke Mode Relaxations**: Hit rate ≥ 80%, p95 latency ≤ 4.0s, result count ≥ 10.
 
 ### 6. Launch Streamlit Analytics Dashboard
 

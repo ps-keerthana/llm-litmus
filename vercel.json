@@ -1,11 +1,10 @@
 {
   "version": 2,
   "name": "llm-litmus",
+  "outputDirectory": "web",
   "cleanUrls": true,
   "trailingSlash": false,
   "rewrites": [
-    { "source": "/v2", "destination": "/web/v2.html" },
-    { "source": "/", "destination": "/web/index.html" },
-    { "source": "/(.*)", "destination": "/web/$1" }
+    { "source": "/v2", "destination": "/v2.html" }
   ]
 }

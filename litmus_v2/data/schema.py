@@ -4,7 +4,7 @@ Pydantic models for chunks, Q/A candidates, human labels, and manifests.
 """
 
 from enum import Enum
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any, Optional, Union
 from pydantic import BaseModel, Field
 
 
@@ -14,6 +14,24 @@ class QuestionType(str, Enum):
     YES_NO = "yes_no"
     MULTI_HOP = "multi_hop"
     UNANSWERABLE = "unanswerable"
+
+
+class GradeLabel(str, Enum):
+    CORRECT = "correct"
+    WRONG = "wrong"
+    ABSTAIN = "abstain"
+    ERROR = "error"
+
+
+class GoldenDatasetItem(BaseModel):
+    query_id: str
+    question: str
+    ground_truth_answer: str
+    question_type: Union[QuestionType, str] = QuestionType.SINGLE_FACT
+    context: Optional[str] = None
+    reference_correct: bool = True
+    supported_by_chunk: bool = True
+    metadata: Dict[str, Any] = Field(default_factory=dict)
 
 
 class Chunk(BaseModel):

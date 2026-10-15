@@ -35,15 +35,7 @@ from typing import Any, Dict, List, Optional, Tuple
 from pydantic import BaseModel, Field
 
 
-# ─────────────────────────────────────────────────────────────────────────────
-# Shared data models
-# ─────────────────────────────────────────────────────────────────────────────
-
-class GradeLabel(str, Enum):
-    CORRECT = "correct"
-    WRONG = "wrong"
-    ABSTAIN = "abstain"      # Grader could not determine
-    ERROR = "error"          # Grader failed (API error, timeout, etc.)
+from litmus_v2.data.schema import GradeLabel
 
 
 class GradeResult(BaseModel):

@@ -1,0 +1,51 @@
+# litmus_v2 Central Configuration
+seed: 42
+
+paths:
+  docs_dir: "docs"
+  data_dir: "litmus_v2/data"
+  results_dir: "litmus_v2/results"
+
+model_families:
+  # Family A: Dataset Generation (Candidate Q/A synthesis from chunks)
+  generator:
+    family: "qwen"
+    model: "qwen/qwen3.8-27b"
+    provider: "groq"
+    temperature: 0.2
+
+  # Family B: Answering System Under Evaluation
+  answering:
+    family: "meta-llama"
+    model: "llama3.2:1b"
+    provider: "ollama"
+    fallback_model: "llama-3.3-70b-versatile"
+    fallback_provider: "groq"
+    temperature: 0.0
+
+  # Family C: Evaluation LLM-as-a-Judge (Must be distinct from Family A and B to avoid circularity)
+  judge:
+    family: "mistral"
+    model: "mixtral-8x7b-32768"
+    provider: "groq"
+    temperature: 0.0
+
+chunking:
+  strategy: "hierarchical_paragraph"  # paragraph with sentence fallback
+  max_tokens: 300
+  overlap_tokens: 50
+
+retrieval:
+  top_k: 5
+  dense_model: "sentence-transformers/all-MiniLM-L6-v2"
+  cross_encoder_model: "cross-encoder/ms-marco-MiniLM-L-6-v2"
+  rrf_k: 60
+
+active_sampling:
+  target_sample_size: 100
+  categories:
+    single_fact: 25
+    numeric: 25
+    yes_no: 20
+    multi_hop: 15
+    unanswerable: 15

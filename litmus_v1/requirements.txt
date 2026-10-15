@@ -1,0 +1,18 @@
+# ── Core evaluation dependencies ──────────────────────────────────────────────
+# Using compatible-release (~=) pins to accept patches but not major/minor bumps.
+groq~=0.12                 # Groq LLM API client (llama-3.3-70b-versatile)
+openai~=1.50               # OpenAI API client (gpt-4o-mini)
+anthropic~=0.36            # Anthropic API client (claude-3-5-haiku)
+sentence-transformers~=3.0 # all-MiniLM-L6-v2 embeddings
+chromadb~=0.5              # Vector store (persistent + in-memory)
+python-dotenv~=1.0         # .env loading
+numpy~=1.26                # Numeric ops (pinned below 2.0 for compatibility)
+
+# ── Dashboard ─────────────────────────────────────────────────────────────────
+streamlit~=1.39            # Streamlit dashboard
+pandas~=2.2                # DataFrame ops
+plotly~=5.24               # Interactive charts
+
+# ── Backend API service ───────────────────────────────────────────────────────
+fastapi~=0.115
+uvicorn[standard]~=0.32
